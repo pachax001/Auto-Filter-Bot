@@ -3,7 +3,7 @@
 ## Features ✅
 - Unlimited filter adding.
 - Support Telegram Buttons and Alerts.
-- Anyone can add filters after connecting their chats
+- For private use. Can use restrict the bot for specific users.
 
 ## Installation
 
@@ -48,9 +48,8 @@ sudo docker system prune -a
 - `TG_BOT_TOKEN` - Get it from @BotFather
 -  `DATABASE_URI`- MongoDB URL ([Click here](https://github.com/pachax001/Auto-Filter-Bot/blob/main/README.md#-generate-mongodb-database) for more info on MongoDB URL.)
 -  `DATABASE_NAME` - MongoDB Cluster name (Default is `Cluster0`)
--  `AUTH_USERS` - Authorized Users. Doesn't do anything. Keep it blank. But need for private version.
+-  `AUTH_USERS` - Authorized Users. Add the by separating from ,. Eg: 123,456.
 -  `OWNER_ID` - Owner ID of the bot owner. Get it from @MissRose_bot
--  `SAVE_USER` - Save the users who have start the bot. Values are `YES` or `NO`. Will take the space from database.
 -  `ADD_FILTER_CMD` - Custom command for filter adding. Default is `add`.
 -  `DELETE_FILTER_CMD` - Custom command for deleting filters. Default is `del`.
 -  `DELETE_ALL_CMD` - Custom command for deleting all filters of the connected chat. Default is `delall`.

@@ -12,8 +12,10 @@ from script import Script
 from plugins.helpers import humanbytes
 from database.filters_mdb import filter_stats
 from database.users_mdb import add_user, find_user, all_users
+OWNER_ID = int(Config.OWNER_ID)
+AUTH_USERS = Config.AUTH_USERS
   
-@pachax001.on_message(filters.command('id') & (filters.private | filters.group))
+@pachax001.on_message(filters.command('id') & filters.user([OWNER_ID] + list(AUTH_USERS)))
 async def showid(client, message):
     chat_type = message.chat.type
 
@@ -37,70 +39,70 @@ async def showid(client, message):
         )
 
 
-@pachax001.on_message(filters.command('info') & (filters.private | filters.group))
-async def showinfo(client, message):
-    try:
-        cmd, id = message.text.split(" ", 1)
-    except:
-        id = False
-        pass
+# @pachax001.on_message(filters.command('info') & (filters.user(OWNER_ID)))
+# async def showinfo(client, message):
+#     try:
+#         cmd, id = message.text.split(" ", 1)
+#     except:
+#         id = False
+#         pass
 
-    if id:
-        if (len(id) == 10 or len(id) == 9):
-            try:
-                checkid = int(id)
-            except:
-                await message.reply_text("__Enter a valid USER ID__", quote=True)
-                return
-        else:
-            await message.reply_text("__Enter a valid USER ID__", quote=True)
-            return           
+#     if id:
+#         if (len(id) == 10 or len(id) == 9):
+#             try:
+#                 checkid = int(id)
+#             except:
+#                 await message.reply_text("__Enter a valid USER ID__", quote=True)
+#                 return
+#         else:
+#             await message.reply_text("__Enter a valid USER ID__", quote=True)
+#             return           
 
-        if Config.SAVE_USER == "yes":
-            name, username, dcid = await find_user(str(id))
-        else:
-            try:
-                user = await client.get_users(int(id))
-                name = str(user.first_name + (user.last_name or ""))
-                username = user.username
-                dcid = user.dc_id
-            except:
-                name = False
-                pass
+#         if Config.SAVE_USER == "yes":
+#             name, username, dcid = await find_user(str(id))
+#         else:
+#             try:
+#                 user = await client.get_users(int(id))
+#                 name = str(user.first_name + (user.last_name or ""))
+#                 username = user.username
+#                 dcid = user.dc_id
+#             except:
+#                 name = False
+#                 pass
 
-        if not name:
-            await message.reply_text("__USER Details not found!!__")
-            return
-    else:
-        if message.reply_to_message:
-            name = str(message.reply_to_message.from_user.first_name\
-                    + (message.reply_to_message.from_user.last_name or ""))
-            id = message.reply_to_message.from_user.id
-            username = message.reply_to_message.from_user.username
-            dcid = message.reply_to_message.from_user.dc_id
-        else:
-            name = str(message.from_user.first_name\
-                    + (message.from_user.last_name or ""))
-            id = message.from_user.id
-            username = message.from_user.username
-            dcid = message.from_user.dc_id
+#         if not name:
+#             await message.reply_text("__USER Details not found!!__")
+#             return
+#     else:
+#         if message.reply_to_message:
+#             name = str(message.reply_to_message.from_user.first_name\
+#                     + (message.reply_to_message.from_user.last_name or ""))
+#             id = message.reply_to_message.from_user.id
+#             username = message.reply_to_message.from_user.username
+#             dcid = message.reply_to_message.from_user.dc_id
+#         else:
+#             name = str(message.from_user.first_name\
+#                     + (message.from_user.last_name or ""))
+#             id = message.from_user.id
+#             username = message.from_user.username
+#             dcid = message.from_user.dc_id
     
-    if not str(username) == "None":
-        user_name = f"@{username}"
-    else:
-        user_name = "none"
+#     if not str(username) == "None":
+#         user_name = f"@{username}"
+#     else:
+#         user_name = "none"
 
-    await message.reply_text(
-        f"<b>Name</b> : {name}\n\n"
-        f"<b>User ID</b> : <code>{id}</code>\n\n"
-        f"<b>Username</b> : {user_name}\n\n"
-        f"<b>Permanant USER link</b> : <a href='tg://user?id={id}'>Click here!</a>\n\n"
-        f"<b>DC ID</b> : {dcid}\n\n",
-        quote=True
-    )
+#     await message.reply_text(
+#         f"<b>Name</b> : {name}\n\n"
+#         f"<b>User ID</b> : <code>{id}</code>\n\n"
+#         f"<b>Username</b> : {user_name}\n\n"
+#         f"<b>Permanant USER link</b> : <a href='tg://user?id={id}'>Click here!</a>\n\n"
+#         f"<b>DC ID</b> : {dcid}\n\n",
+#         quote=True
+#     )
 
 
-@pachax001.on_message((filters.private | filters.group) & filters.command('status'))
+@pachax001.on_message((filters.private & filters.user(OWNER_ID)) & filters.command('status'))
 async def bot_status(client,message):
     if (str(message.from_user.id)) not in Config.AUTH_USERS and (str(message.from_user.id)) != str(Config.OWNER_ID):
         return
@@ -145,7 +147,6 @@ async def start(client, message):
         reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("Command Help", callback_data="help_data"),
                     InlineKeyboardButton("OWNER", url="https://t.me/gunaya001")
 
                 ],
@@ -157,19 +158,19 @@ async def start(client, message):
         ),
         reply_to_message_id=message.id
     )
-    if Config.SAVE_USER == "yes":
-        try:
-            await add_user(
-                str(message.from_user.id),
-                str(message.from_user.username),
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    # if Config.SAVE_USER == "yes":
+    #     try:
+    #         await add_user(
+    #             str(message.from_user.id),
+    #             str(message.from_user.username),
+    #             str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+    #             str(message.from_user.dc_id)
+    #         )
+    #     except:
+    #         pass
 
 
-@pachax001.on_message(filters.command('help') & filters.private)
+@pachax001.on_message(filters.command('help') & filters.private & filters.user([OWNER_ID] + list(AUTH_USERS)))
 async def help(client, message):
     await message.reply_text(
         text=Script.HELP_MSG,
@@ -190,7 +191,7 @@ async def help(client, message):
     )
 
 
-@pachax001.on_message(filters.command('about') & filters.private)
+@pachax001.on_message(filters.command('about') & filters.private & filters.user([OWNER_ID] + list(AUTH_USERS)))
 async def about(client, message):
     bot_details = await client.get_me()
     first_name = bot_details.first_name

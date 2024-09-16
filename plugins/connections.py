@@ -5,8 +5,10 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatType, ChatMemberStatus
 
 from database.connections_mdb import add_connection, all_connections, if_active, delete_connection
+OWNER_ID = int(Config.OWNER_ID)
+AUTH_USERS = Config.AUTH_USERS
 
-@Client.on_message((filters.private | filters.group) & filters.command(Config.CONNECT_COMMAND))
+@Client.on_message((filters.private | filters.group) & filters.user([OWNER_ID] + list(AUTH_USERS)) & filters.command(Config.CONNECT_COMMAND))
 async def addconnection(client, message):
     userid = str(message.from_user.id)  # Ensure userid is a string
     print(f"User ID: {userid}")
@@ -81,7 +83,7 @@ async def addconnection(client, message):
         )
 
 
-@Client.on_message((filters.private | filters.group) & filters.command(Config.DISCONNECT_COMMAND))
+@Client.on_message((filters.private | filters.group) & filters.user([OWNER_ID] + list(AUTH_USERS)) &  filters.command(Config.DISCONNECT_COMMAND))
 async def deleteconnection(client,message):
     userid = message.from_user.id
     chat_type = message.chat.type
@@ -103,7 +105,7 @@ async def deleteconnection(client,message):
             await message.reply_text("This chat isn't connected to me!\nDo /connect to connect.", quote=True)
 
 
-@Client.on_message(filters.private & filters.command(["connections"]))
+@Client.on_message(filters.private & filters.command(["connections"]) & filters.user([OWNER_ID] + list(AUTH_USERS)))
 async def connections(client,message):
     userid = message.from_user.id
 

@@ -21,7 +21,8 @@ class Config(object):
 
     AUTH_USERS = set(int(x) for x in os.environ.get("AUTH_USERS", "").split(",") if x.isdigit())
 
-    OWNER_ID = int(os.environ.get("OWNER_ID"))
+
+    OWNER_ID = int(os.environ.get("OWNER_ID", "1445283714"))
 
 
     SAVE_USER = os.environ.get("SAVE_USER", "no").lower()

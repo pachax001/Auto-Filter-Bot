@@ -1,0 +1,6 @@
+pyrofork
+TgCrypto
+umongo
+dnspython
+heroku3
+python-dotenv

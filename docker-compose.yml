@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    container_name: auto-filter-bot
+    volumes:
+      - ./data:/bot/data
+    env_file:
+      - config.env
+    restart: unless-stopped

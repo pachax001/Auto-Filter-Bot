@@ -3,7 +3,7 @@
 ## Features ✅
 - Unlimited filter adding.
 - Support Telegram Buttons and Alerts.
-- For private use. Can use restrict the bot for specific users.
+- For private use. Can restrict the bot for specific users.
 
 ## Installation
 
@@ -11,9 +11,9 @@
 #### We are gonna use docker compose to run the bot.
 Install docker on your VPS. See official [Docker Docs.](https://docs.docker.com/engine/install/ubuntu/)
 <br> After installing docker follow the below steps.</br>
-1. Clone the repo and change directory to streamextract
+1. Clone the repo and change directory to Auto-Filter-Bot and change branch to private
 ```
-git clone https://github.com/pachax001/Auto-Filter-Bot.git && cd Auto-Filter-Bot/
+git clone https://github.com/pachax001/Auto-Filter-Bot.git && cd Auto-Filter-Bot/ && git checkout private
 ```
 2.Rename sample_config.env to config.env and fill config.env
 ```

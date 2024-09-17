@@ -31,6 +31,7 @@ class Config(object):
     DELETE_ALL_CMD = os.environ.get("DELETE_ALL_CMD", "delall")
     CONNECT_COMMAND = os.environ.get("CONNECT_COMMAND", "connect")
     DISCONNECT_COMMAND = os.environ.get("DISCONNECT_COMMAND", "disconnect")
+    CONNECTIONS_COMMAND = os.environ.get("CONNECTIONS_COMMAND", "connections")
     VIEW_FILTERS_COMMAND = os.environ.get("VIEW_FILTERS_COMMAND", "filters")
 
     BOT_START_TIME = time.time()

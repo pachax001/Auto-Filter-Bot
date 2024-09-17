@@ -85,6 +85,17 @@ async def del_all(message, group_id, title):
         await message.edit_text(f"Couldn't remove all filters from group!")
         return
 
+async def del_all_filters_connection(group_id):
+    if str(group_id) not in mydb.list_collection_names():
+        return 1
+        
+    mycol = mydb[str(group_id)]
+    try:
+        mycol.drop()
+        return 2
+    except:
+        return
+
 
 async def count_filters(group_id):
     mycol = mydb[str(group_id)]

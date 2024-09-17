@@ -4,6 +4,8 @@
 - Unlimited filter adding.
 - Support Telegram Buttons and Alerts.
 - Anyone can add filters after connecting their chats
+- When a group connection is deleted all the filters related to that group also get deleted to save database storage.
+- Disconnected chats can be connected again if needed. All the previous filters works for the connected group.
 
 ## Installation
 
@@ -56,7 +58,8 @@ sudo docker system prune -a
 -  `DELETE_ALL_CMD` - Custom command for deleting all filters of the connected chat. Default is `delall`.
 -  `CONNECT_COMMAND`- Custom command for connecting to chat. Default is `connect`.
 -  `DISCONNECT_COMMAND` - Custom command for disconnecting from the curerntly connected chat. Default is `disconnect`.
--  `VIEW_FILTERS_COMMAND` - To view all filters of the currently connected chat.
+- `CONNECTIONS_COMMAND` - To view connections. Default is `connections.`
+-  `VIEW_FILTERS_COMMAND` - To view all filters of the currently connected chat. Default is `filters`.
 
 
 ### 🤖 ***Bot Commands (Default)***

@@ -204,18 +204,19 @@ async def get_all(client, message):
     texts = await get_filters(grp_id)
     count = await count_filters(grp_id)
     if count:
+        texts = sorted(texts)
         filterlist = f"Total number of filters in **{title}** : {count}\n\n"
-
-        for text in texts:
-            keywords = " ×  `{}`\n".format(text)
-            
-            filterlist += keywords
-
+        keywords = "\n".join(f"{idx + 1}.  `{text}`" for idx, text in enumerate(texts))
+        filterlist = f"Total number of filters in **{title}** : {count}\n\n{keywords}"
+        doc_keywords = "\n".join(f"{idx + 1}.  {text}" for idx, text in enumerate(texts))
+        doc_filterlist = f"Total number of filters in {title} : {count}\n\n{doc_keywords}"
         if len(filterlist) > 4096:
-            with io.BytesIO(str.encode(filterlist.replace("`", ""))) as keyword_file:
+            
+            with io.BytesIO(str.encode(doc_filterlist)) as keyword_file:
                 keyword_file.name = "keywords.txt"
                 await message.reply_document(
                     document=keyword_file,
+                    caption=f"Total number of filters in **{title}** : {count}",
                     quote=True
                 )
             return

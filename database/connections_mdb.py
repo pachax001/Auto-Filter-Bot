@@ -104,7 +104,6 @@ async def make_active(user_id, group_id):
     else:
         return True
 
-
 async def make_inactive(user_id):
     update = mycol.update_one(
         {'_id': user_id},

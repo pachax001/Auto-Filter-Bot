@@ -8,7 +8,7 @@ from pyrogram.enums import ChatType, ChatMemberStatus
 from config import Config
 
 from script import Script
-from database.filters_mdb import del_all, find_filter
+from database.filters_mdb import del_all, find_filter, del_all_filters_connection
 
 from database.connections_mdb import(
     all_connections,
@@ -217,10 +217,22 @@ async def cb_handler(client, query):
         delcon = await delete_connection(str(user_id), str(group_id))
 
         if delcon:
-            await query.message.edit_text(
-                "Successfully deleted connection"
-            )
-            return
+            del_all_filters = await del_all_filters_connection(group_id)
+            if del_all_filters == 1:
+                await query.message.edit_text(
+                    "Successfully deleted connection\nNo filters to delete"
+                )
+                return
+            elif del_all_filters == 2:
+                await query.message.edit_text(
+                    "Successfully deleted connection\nAll filters deleted"
+                )
+                return
+            else:
+                await query.message.edit_text(
+                    "Successfully deleted connection\nSome error occured in deleting filters"
+                )
+                return
         else:
             await query.message.edit_text(
                 f"Some error occured!!"

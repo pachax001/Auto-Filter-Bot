@@ -73,8 +73,8 @@ reflect in the group which helps you to keep the filter additions and other stuf
 
 Commands and Usage:
 /{Config.CONNECT_COMMAND}  - <code>connect a particular chat to your PM</code>
-/{Config.DISCONNECT_COMMAND}  - <code>disconnect from a chat</code>
-/connections - <code>list all your connections</code>
+/{Config.DISCONNECT_COMMAND}  - <code>disconnect from a chat.</code>
+/{Config.CONNECTIONS_COMMAND} - <code>list all your connections</code>
 """
     OTHER_HELP = f"""
 <b>Utilities:</b>

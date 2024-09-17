@@ -81,7 +81,7 @@ about - About the bot
 7. Copy your `connection string` and replace `<password>` with the password of your user, then press close.
 
 ## 🏅 **Credits**
-|<img width="70" src="https://avatars.githubusercontent.com/u/88532565">|
+|<img width="70" src="https://avatars.githubusercontent.com/u/88532565">| <img width="70" src="https://avatars.githubusercontent.com/u/70193223">|
 
-|[`Pyrofork`](https://github.com/Mayuri-Chan/pyrofork)|
+|[`Pyrofork`](https://github.com/Mayuri-Chan/pyrofork)|[`Base Repo`](https://github.com/TroJanzHEX/Unlimited-Filter-Bot)|
 

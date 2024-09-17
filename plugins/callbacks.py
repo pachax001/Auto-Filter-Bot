@@ -68,7 +68,7 @@ async def cb_handler(client, query):
             [
                 [
                     InlineKeyboardButton(
-                        "SOURCE CODE", url="https://github.com/pachax001")
+                        "SOURCE CODE", url="https://github.com/pachax001/Auto-Filter-Bot")
                 ],
                 [
                     InlineKeyboardButton("BACK", callback_data="help_data"),

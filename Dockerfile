@@ -6,11 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 # Install system dependencies
-# This includes software-properties-common to manage repositories and Python-related tools
+# This includes python3-venv to create a virtual environment
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-dev \
+    python3-venv \
     git \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -18,11 +19,15 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory inside the container
 WORKDIR /bot
 
+# Create a virtual environment and activate it
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy the requirements.txt file into the working directory
 COPY requirements.txt /bot/
 
 # Install Python dependencies from the requirements.txt file
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your bot's source code into the working directory
 COPY . /bot/

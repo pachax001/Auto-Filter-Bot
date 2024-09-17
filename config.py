@@ -33,5 +33,5 @@ class Config(object):
     CONNECT_COMMAND = os.environ.get("CONNECT_COMMAND", "connect")
     DISCONNECT_COMMAND = os.environ.get("DISCONNECT_COMMAND", "disconnect")
     VIEW_FILTERS_COMMAND = os.environ.get("VIEW_FILTERS_COMMAND", "filters")
-
+    CONNECTIONS_COMMAND = os.environ.get("CONNECTIONS_COMMAND", "connections")
     BOT_START_TIME = time.time()

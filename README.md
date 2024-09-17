@@ -1,4 +1,4 @@
-# Auto-Filter-Bot-Public
+# Auto-Filter-Bot-Private
 
 ## Features ✅
 - Unlimited filter adding.

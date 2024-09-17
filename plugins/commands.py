@@ -151,7 +151,7 @@ async def start(client, message):
 
                 ],
                 [
-                    InlineKeyboardButton("Source Code", url="https://github.com/pachax001"),
+                    InlineKeyboardButton("Source Code", url="https://github.com/pachax001/Auto-Filter-Bot"),
                     
             ]
             ]
@@ -202,7 +202,7 @@ async def about(client, message):
             [
                 [
                     InlineKeyboardButton(
-                        "SOURCE CODE", url="https://github.com/pachax001")
+                        "SOURCE CODE", url="https://github.com/pachax001/Auto-Filter-Bot")
                 ],
                 [
                     InlineKeyboardButton("BACK", callback_data="help_data"),

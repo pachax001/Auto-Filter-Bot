@@ -3,7 +3,7 @@
 ## Features ✅
 - Unlimited filter adding.
 - Support Telegram Buttons and Alerts.
-- For private use. Can use restrict the bot for specific users.
+- For private use. Can restrict the bot for specific users.
 
 ## Installation
 

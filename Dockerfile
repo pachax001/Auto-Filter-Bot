@@ -1,20 +1,21 @@
-# Use a stable slim version of Debian as the base image
-FROM debian:stable-slim
+# Use the default Alpine Linux image for a lightweight container
+FROM alpine:latest
 
-# Set environment variables to prevent Python from writing pyc files to disc and buffering stdout and stderr
+# Set environment variables to prevent Python from writing pyc files to disk and buffering stdout and stderr
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Install system dependencies
-# This includes python3-venv to create a virtual environment
-RUN apt-get update && apt-get install -y \
+# Install necessary dependencies including Python, pip, and system utilities
+RUN apk add --no-cache \
     python3 \
-    python3-pip \
+    py3-pip \
     python3-dev \
-    python3-venv \
+    libffi-dev \
+    openssl-dev \
+    gcc \
+    musl-dev \
     git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    curl
 
 # Set the working directory inside the container
 WORKDIR /bot

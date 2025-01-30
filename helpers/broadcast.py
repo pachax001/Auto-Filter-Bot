@@ -13,7 +13,7 @@ async def broadcast_to_users(client: Client, message: str, batch_size=20, delay=
         batch_size (int): Number of users to send messages to in each batch.
         delay (float): Delay (in seconds) between each batch to avoid flooding.
     """
-    users = list(get_all_users())  # Convert cursor to list
+    users = list(await get_all_users())  # Convert cursor to list
     total_users = len(users)
     sent_count = 0
     failed_count = 0

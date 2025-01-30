@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    container_name: auto-filter-bot
+    container_name: auto-filter-bot-public
     volumes:
       - ./data:/bot/data
     env_file:

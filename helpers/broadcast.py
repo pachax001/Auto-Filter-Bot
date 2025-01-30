@@ -27,7 +27,7 @@ async def broadcast_to_users(client: Client, message: str, batch_size=20, delay=
         tasks = []
         
         for user in batch:
-            user_id = user["user_id"]
+            user_id = user["_id"]
             tasks.append(send_message(client, user_id, message, failed_users))
 
         # Execute tasks concurrently

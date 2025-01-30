@@ -1,4 +1,3 @@
-from config import Config
 import os
 import pymongo
 from datetime import datetime, timedelta

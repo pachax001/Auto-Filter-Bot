@@ -1,4 +1,4 @@
-from config import Config
+from config import ADD_FILTER_CMD, DELETE_FILTER_CMD, DELETE_ALL_CMD, VIEW_FILTERS_COMMAND, CONNECT_COMMAND, DISCONNECT_COMMAND, CONNECTIONS_COMMAND, SAVE_USER
 class Script(object):
 
     START_MSG = """<b>Hi {},
@@ -42,10 +42,10 @@ Filter is the feature where users can set automated replies for a particular key
 5. there are some easter eggs, try to find it out.</i>
 
 Commands and Usage:
-/{Config.ADD_FILTER_CMD}   - <code>add a filter</code>
-/{Config.VIEW_FILTERS_COMMAND} - <code>list all the filters of a chat</code>
-/{Config.DELETE_FILTER_CMD}  - <code>delete a specific filter (separate keywords with spaces for deleting multiple filters at a time)</code>
-/{Config.DELETE_ALL_CMD} - <code>delete the whole filters in a chat (chat owner only)</code>
+/{ADD_FILTER_CMD}   - <code>add a filter</code>
+/{VIEW_FILTERS_COMMAND} - <code>list all the filters of a chat</code>
+/{DELETE_FILTER_CMD}  - <code>delete a specific filter (separate keywords with spaces for deleting multiple filters at a time)</code>
+/{DELETE_ALL_CMD} - <code>delete the whole filters in a chat (chat owner only)</code>
 """
     BUTTON_HELP = """
 <b>Buttons:</b>
@@ -72,9 +72,9 @@ reflect in the group which helps you to keep the filter additions and other stuf
 2. In a chat you can simply use the /connect for starting a connection and in PM you must specify chat id right after the command.</i>
 
 Commands and Usage:
-/{Config.CONNECT_COMMAND}  - <code>connect a particular chat to your PM</code>
-/{Config.DISCONNECT_COMMAND}  - <code>disconnect from a chat.</code>
-/{Config.CONNECTIONS_COMMAND} - <code>list all your connections</code>
+/{CONNECT_COMMAND}  - <code>connect a particular chat to your PM</code>
+/{DISCONNECT_COMMAND}  - <code>disconnect from a chat.</code>
+/{CONNECTIONS_COMMAND} - <code>list all your connections</code>
 """
     OTHER_HELP = f"""
 <b>Utilities:</b>

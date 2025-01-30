@@ -17,6 +17,7 @@ from helpers.use_bot import user_can_use_bot
 from helpers.broadcast import broadcast_to_users
 from database.config_db import get_public_mode, set_public_mode
 from helpers.logger import logger
+import shlex
 @pachax001.on_message(filters.command('id') & (filters.private | filters.group))
 async def showid(client, message):
     userId = message.from_user.id
@@ -288,7 +289,14 @@ async def send_log(client, message):
 
 @pachax001.on_message(filters.command('broadcast') & filters.private & filters.user(OWNER_ID))
 async def manual_broadcast_command(client, message):
-    await broadcast_to_users(client, message)
+    #shlex is used to split the string into a list of arguments
+    try:
+        cmd, msg = message.text.split(" ", 1)
+    except:
+        await message.reply_text("Please provide a message.")
+        return
+    await broadcast_to_users(client, msg)
+    
 
 @pachax001.on_message(filters.command('auth') & filters.private & filters.user(OWNER_ID))
 async def auth_user(client, message):

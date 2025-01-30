@@ -114,6 +114,13 @@ async def filter_stats():
         collections.remove("CONNECTION")
     if "USERS" in collections:
         collections.remove("USERS")
+    if "authorised_users" in collections:
+        collections.remove("authorised_users")
+    if "settings" in collections:
+        collections.remove("settings")
+    if "BROADCAST" in collections:
+        collections.remove("BROADCAST")
+    
 
     totalcount = 0
     for collection in collections:

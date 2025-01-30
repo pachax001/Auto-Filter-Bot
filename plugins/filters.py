@@ -5,8 +5,10 @@ from pyrogram import filters, Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatType, ChatMemberStatus
 import shlex
-from config import Config
+from config import ADD_FILTER_CMD, VIEW_FILTERS_COMMAND, DELETE_FILTER_CMD, DELETE_ALL_CMD, AUTH_USERS, SAVE_USER
 
+from database.auth_users import is_user_authorized
+from helpers.use_bot import user_can_use_bot
 from database.filters_mdb import(
    add_filter,
    find_filter,
@@ -16,16 +18,33 @@ from database.filters_mdb import(
 )
 
 from database.connections_mdb import active_connection
-from database.users_mdb import add_user, all_users
+from database.users_mdb import add_or_update_user
 
 from plugins.helpers import parser,split_quotes
 
 
 
-@Client.on_message(filters.command(Config.ADD_FILTER_CMD))
+@Client.on_message(filters.command(ADD_FILTER_CMD))
 async def addfilter(client, message):
       
     userid = message.from_user.id
+    if not user_can_use_bot(userid):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    if SAVE_USER == "yes":
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
     chat_type = message.chat.type
     args = message.text.html.split(None, 1)
 
@@ -51,7 +70,7 @@ async def addfilter(client, message):
         return
 
     st = await client.get_chat_member(grp_id, userid)
-    if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS)):
+    if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
         return
         
 
@@ -170,11 +189,28 @@ async def addfilter(client, message):
     )
 
 
-@Client.on_message(filters.command(Config.VIEW_FILTERS_COMMAND))
+@Client.on_message(filters.command(VIEW_FILTERS_COMMAND))
 async def get_all(client, message):
     
     chat_type = message.chat.type
     userid = message.from_user.id
+    if not user_can_use_bot(userid):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    if SAVE_USER == "yes":
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
     if chat_type == ChatType.PRIVATE:
         
         grpid = await active_connection(str(userid))
@@ -198,7 +234,7 @@ async def get_all(client, message):
         return
 
     st = await client.get_chat_member(grp_id, userid)
-    if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS)):
+    if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
         return
 
     texts = await get_filters(grp_id)
@@ -228,9 +264,26 @@ async def get_all(client, message):
         quote=True
     )
         
-@Client.on_message(filters.command(Config.DELETE_FILTER_CMD))
+@Client.on_message(filters.command(DELETE_FILTER_CMD))
 async def deletefilter(client, message):
     userid = message.from_user.id
+    if not user_can_use_bot(userid):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    if SAVE_USER == "yes":
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
     chat_type = message.chat.type
 
     if chat_type == ChatType.PRIVATE:
@@ -254,7 +307,7 @@ async def deletefilter(client, message):
         return
 
     st = await client.get_chat_member(grp_id, userid)
-    if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS)):
+    if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
         return
 
     try:
@@ -263,7 +316,7 @@ async def deletefilter(client, message):
             raise ValueError("No filter names provided")
         filters_to_delete = args[1:]
     except:
-        view_filter_cmd = Config.VIEW_FILTERS_COMMAND
+        view_filter_cmd = VIEW_FILTERS_COMMAND
         await message.reply_text(
             "<i>Mention the filtername which you wanna delete!</i>\n\n"
             "<code>/del filtername</code>\n\n"
@@ -275,9 +328,26 @@ async def deletefilter(client, message):
         await delete_filter(message, filter_name.lower(), grp_id)
         
 
-@Client.on_message(filters.command(Config.DELETE_ALL_CMD))
+@Client.on_message(filters.command(DELETE_ALL_CMD))
 async def delallconfirm(client, message):
     userid = message.from_user.id
+    if not user_can_use_bot(userid):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    if SAVE_USER == "yes":
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
     chat_type = message.chat.type
 
     if chat_type == ChatType.PRIVATE:
@@ -302,7 +372,7 @@ async def delallconfirm(client, message):
         return
 
     st = await client.get_chat_member(grp_id, userid)
-    if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):
+    if (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid)):
         await message.reply_text(
             f"This will delete all filters from '{title}'.\nDo you want to continue??",
             reply_markup=InlineKeyboardMarkup([
@@ -356,21 +426,13 @@ async def give_filter(client,message):
                     print(e)
                     pass
                 break 
-                
-    if Config.SAVE_USER == "yes":
-        try:
-            await add_user(
-                str(message.from_user.id),
-                str(message.from_user.username),
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
 
 @Client.on_message(filters.private & filters.text)
 async def give_filter_private(client,message):
+
     user_id = message.chat.id
+    if not user_can_use_bot(user_id):
+        return
     print(user_id)
     name = message.text
     print(name)
@@ -415,12 +477,13 @@ async def give_filter_private(client,message):
                     pass
                 break 
                 
-    if Config.SAVE_USER == "yes":
+    if SAVE_USER == "yes":
         try:
-            await add_user(
+            await add_or_update_user(
                 str(message.from_user.id),
-                str(message.from_user.username),
+                str(message.from_user.username) or "None",
                 str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
                 str(message.from_user.dc_id)
             )
         except:

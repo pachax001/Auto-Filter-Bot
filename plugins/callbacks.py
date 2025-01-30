@@ -3,9 +3,9 @@ import ast
 from pyrogram import Client as pachax001
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatType, ChatMemberStatus
+from database.auth_users import is_user_authorized
 
-
-from config import Config
+#from config import Config
 
 from script import Script
 from database.filters_mdb import del_all, find_filter, del_all_filters_connection
@@ -50,7 +50,7 @@ async def cb_handler(client, query):
                 ],
                 [
                     InlineKeyboardButton("Others", callback_data="help_other"),
-                    InlineKeyboardButton("Owner", url="https://t.me/gunaya001")
+                    InlineKeyboardButton("Owner", url="https://t.me/Tonbidmaster")
                 ]
             ]
         )
@@ -68,7 +68,7 @@ async def cb_handler(client, query):
             [
                 [
                     InlineKeyboardButton(
-                        "SOURCE CODE", url="https://github.com/pachax001/Auto-Filter-Bot")
+                        "OWNER", url="https://t.me/Tonbidmaster")
                 ],
                 [
                     InlineKeyboardButton("BACK", callback_data="help_data"),
@@ -117,7 +117,8 @@ async def cb_handler(client, query):
             return
 
         st = await client.get_chat_member(grp_id, userid)
-        if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):    
+        #if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):
+        if (st.status == ChatMemberStatus.OWNER) or is_user_authorized(userid):    
             await del_all(query.message, grp_id, title)
         else:
             await query.answer("You need to be Group Owner or an Auth User to do that!",show_alert=True)
@@ -133,7 +134,8 @@ async def cb_handler(client, query):
         elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
             grp_id = query.message.chat.id
             st = await client.get_chat_member(grp_id, userid)
-            if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):
+            # if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):
+            if (st.status == ChatMemberStatus.OWNER) or is_user_authorized(userid):
                 await query.message.delete()
                 try:
                     await query.message.reply_to_message.delete()

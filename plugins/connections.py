@@ -1,17 +1,37 @@
-from config import Config
-
 from pyrogram import filters, Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatType, ChatMemberStatus
-
+from config import CONNECT_COMMAND, DISCONNECT_COMMAND, CONNECTIONS_COMMAND, SAVE_USER
 from database.connections_mdb import add_connection, all_connections, if_active, delete_connection,make_active,make_inactive
 from database.filters_mdb import del_all_filters_connection
+from database.users_mdb import add_or_update_user
+from helpers.use_bot import user_can_use_bot
+from database.auth_users import is_user_authorized
 
-@Client.on_message((filters.private | filters.group) & filters.command(Config.CONNECT_COMMAND))
+@Client.on_message((filters.private | filters.group) & filters.command(CONNECT_COMMAND))
 async def addconnection(client, message):
     userid = str(message.from_user.id)  # Ensure userid is a string
     print(f"User ID: {userid}")
-    
+    user_id = message.from_user.id
+    if not user_can_use_bot(user_id):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    # Add user to database
+    if SAVE_USER == "yes":
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
+
     chat_type = message.chat.type
     print(f"Chat Type: {chat_type}")
     group_ids = await all_connections(userid)
@@ -39,7 +59,7 @@ async def addconnection(client, message):
         st = await client.get_chat_member(group_id, userid)
         print(f"User status: {st}")
 
-        if st.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER] and int(userid) not in Config.AUTH_USERS:
+        if st.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER] and not is_user_authorized(int(userid)):
             await message.reply_text("You should be an admin or owner in the given group!", quote=True)
             return
     except Exception as e:
@@ -97,9 +117,28 @@ async def addconnection(client, message):
         )
 
 
-@Client.on_message((filters.private | filters.group) & filters.command(Config.DISCONNECT_COMMAND))
+@Client.on_message((filters.private | filters.group) & filters.command(DISCONNECT_COMMAND))
 async def diconnectconnection(client,message):
     userid = message.from_user.id
+    print(userid)
+    if not user_can_use_bot(userid):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    if SAVE_USER == "yes":  
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
+    
     chat_type = message.chat.type
     group_ids = await all_connections(str(userid))
     if chat_type == ChatType.PRIVATE:
@@ -108,16 +147,16 @@ async def diconnectconnection(client,message):
         except ValueError:
             await message.reply_text(
                 "<b>Enter the correct format!</b>\n\n"
-                f"<code>/{Config.DISCONNECT_COMMAND} groupid</code>\n\n"
+                f"<code>/{DISCONNECT_COMMAND} groupid</code>\n\n"
                 "<i>Get your Group ID by adding this bot to your group and use <code>/id</code></i>\n\n"
                 "<b>OR</b>\n\n"
-                f"<code>send /{Config.DISCONNECT_COMMAND}</code> as a message to the group",
+                f"<code>send /{DISCONNECT_COMMAND}</code> as a message to the group",
                 quote=True
             )
             return
         group_id = str(group_id_str)
         st = await client.get_chat_member(group_id, userid)
-        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS)):
+        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
             return
         #delcon = await delete_connection(str(userid), str(group_id))
         if group_ids is not None and group_id in group_ids:
@@ -132,7 +171,7 @@ async def diconnectconnection(client,message):
         group_id = message.chat.id
 
         st = await client.get_chat_member(group_id, userid)
-        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS)):
+        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
             return
         if group_ids is not None and str(group_id) in group_ids:
             if_active_var = await if_active(str(userid), str(group_id))
@@ -143,10 +182,27 @@ async def diconnectconnection(client,message):
                 await message.reply_text("This chat is already disconnected", quote=True)
 
 
-@Client.on_message(filters.private & filters.command(Config.CONNECTIONS_COMMAND))
+@Client.on_message(filters.private & filters.command(CONNECTIONS_COMMAND))
 async def connections(client,message):
     userid = message.from_user.id
     print(userid)
+    if not user_can_use_bot(userid):
+        await message.reply_text(
+            "You are not authorized to use this bot.",
+            quote=True
+        )
+        return
+    if SAVE_USER == "yes":
+        try:
+            await add_or_update_user(
+                str(message.from_user.id),
+                str(message.from_user.username) or "None",
+                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
+                str(message.from_user.first_name),
+                str(message.from_user.dc_id)
+            )
+        except:
+            pass
     groupids = await all_connections(str(userid))
     print(groupids)
     if groupids is None or groupids == []:

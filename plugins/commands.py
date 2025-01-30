@@ -363,13 +363,12 @@ async def toggle_public_mode(client, message):
         await message.reply_text(f"Public mode turned {'off' if current else 'on'}.")
         try:
             # Broadcast the change to all users
-            broadcast_messaage =(
-                f"📢 Public mode has been turned {'off' if current else 'on'} by the bot owner."
-                #show a message saying maintenance mode is on
-                f"Bots will be down for a while for maintenance, please be patient."
-                f"{'\n\nThis means only authorized users can use the bot.' if current else ''}"
+            broadcast_messaage = (
+    f"📢 Public mode has been turned {'off' if current else 'on'} by the bot owner."
+    f"\n\n{'Bots will be down for a while for maintenance, please be patient.' if current else ''}"
+    f"\n\n{'This means only authorized users can use the bot.' if current else ''}"
+)
 
-            )
             await broadcast_to_users(client, broadcast_messaage)
         except Exception as e:
             logger.error(f"An error occurred while broadcasting: {e}")

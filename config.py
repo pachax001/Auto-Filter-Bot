@@ -27,7 +27,7 @@ class Config(object):
 
     SAVE_USER = os.environ.get("SAVE_USER", "no").lower()
 
-    AUTO_DELETE_TIME = os.environ.get("AUTO_DELETE_TIME", "300")
+    AUTO_DELETE_TIME = int(os.environ.get("AUTO_DELETE_TIME", "300"))
 
     ADD_FILTER_CMD = os.environ.get("ADD_FILTER_CMD", "add")
     DELETE_FILTER_CMD = os.environ.get("DELETE_FILTER_CMDD", "del")

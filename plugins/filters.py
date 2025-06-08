@@ -1,3 +1,4 @@
+import asyncio
 import re
 import io
 import pyrogram
@@ -329,27 +330,29 @@ async def give_filter(client,message):
             if reply_text:
                 reply_text = reply_text.replace("\\n", "\n").replace("\\t", "\t")
 
+            sent_msg = None
+
             if btn is not None:
                 try:
                     if fileid == "None":
                         if btn == "[]":
-                            await message.reply_text(reply_text, disable_web_page_preview=True)
+                            sent_msg=await message.reply_text(reply_text, disable_web_page_preview=True)
                         else:
                             button = eval(btn)
-                            await message.reply_text(
+                            sent_msg=await message.reply_text(
                                 reply_text,
                                 disable_web_page_preview=True,
                                 reply_markup=InlineKeyboardMarkup(button)
                             )
                     else:
                         if btn == "[]":
-                            await message.reply_cached_media(
+                            sent_msg = await message.reply_cached_media(
                                 fileid,
                                 caption=reply_text or ""
                             )
                         else:
                             button = eval(btn) 
-                            await message.reply_cached_media(
+                            sent_msg = await message.reply_cached_media(
                                 fileid,
                                 caption=reply_text or "",
                                 reply_markup=InlineKeyboardMarkup(button)
@@ -357,6 +360,10 @@ async def give_filter(client,message):
                 except Exception as e:
                     print(e)
                     pass
+                finally:
+                    if sent_msg is not None:
+                        await asyncio.sleep(Config.AUTO_DELETE_TIME)
+                        await sent_msg.delete()
                 break 
                 
     # if Config.SAVE_USER == "yes":
@@ -387,27 +394,29 @@ async def give_filter_private(client,message):
             if reply_text:
                 reply_text = reply_text.replace("\\n", "\n").replace("\\t", "\t")
 
+            sent_msg = None
+
             if btn is not None:
                 try:
                     if fileid == "None":
                         if btn == "[]":
-                            await message.reply_text(reply_text, disable_web_page_preview=True)
+                            sent_msg = await message.reply_text(reply_text, disable_web_page_preview=True)
                         else:
                             button = eval(btn)
-                            await message.reply_text(
+                            sent_msg=await message.reply_text(
                                 reply_text,
                                 disable_web_page_preview=True,
                                 reply_markup=InlineKeyboardMarkup(button)
                             )
                     else:
                         if btn == "[]":
-                            await message.reply_cached_media(
+                            sent_msg=await message.reply_cached_media(
                                 fileid,
                                 caption=reply_text or ""
                             )
                         else:
                             button = eval(btn) 
-                            await message.reply_cached_media(
+                            sent_msg=await message.reply_cached_media(
                                 fileid,
                                 caption=reply_text or "",
                                 reply_markup=InlineKeyboardMarkup(button)
@@ -415,6 +424,10 @@ async def give_filter_private(client,message):
                 except Exception as e:
                     print(e)
                     pass
+                finally:
+                    if sent_msg is not None:
+                        await asyncio.sleep(Config.AUTO_DELETE_TIME)
+                        await sent_msg.delete()
                 break 
                 
       

@@ -3,6 +3,8 @@ from wzgram import Client
 from wzgram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from wzgram.enums import ChatType, ChatMemberStatus
 from database.auth_users import is_user_authorized
+from helpers.logger import logger
+from helpers.error_handling import log_handler_errors
 from helpers.use_bot import user_can_use_bot
 from script import Script
 from database.filters_mdb import del_all, find_filter
@@ -19,6 +21,7 @@ async def _can_manage(client, user_id, group_id):
         member = await client.get_chat_member(int(group_id), int(user_id))
         return member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
     except Exception:
+        logger.exception("Callback group permission lookup failed user_id=%s group_id=%s", user_id, group_id)
         return False
 
 
@@ -33,6 +36,7 @@ async def _can_delete_all(client, user_id, group_id):
 
 
 @Client.on_callback_query()
+@log_handler_errors("plugins/callbacks.py:cb_handler")
 async def cb_handler(client, query):
     if not query.from_user or not query.data:
         return
@@ -118,12 +122,14 @@ async def cb_handler(client, query):
         if not await _can_delete_all(client, query.from_user.id, group_id):
             await query.answer("Only the group owner or authorized user may delete all filters.", show_alert=True)
             return
-        await query.answer()
         try:
             title = (await client.get_chat(group_id)).title
         except Exception:
+            logger.exception("Callback group lookup failed group_id=%s user_id=%s",
+                             group_id, query.from_user.id)
             await query.answer("Group unavailable", show_alert=True)
             return
+        await query.answer()
         await del_all(query.message, group_id, title)
         return
 
@@ -151,6 +157,8 @@ async def cb_handler(client, query):
         try:
             title = (await client.get_chat(int(group_id))).title
         except Exception:
+            logger.exception("Group details unavailable for callback user_id=%s group_id=%s",
+                             query.from_user.id, group_id)
             await query.answer("Group unavailable", show_alert=True)
             return
         active = await if_active(query.from_user.id, group_id)
@@ -224,6 +232,8 @@ async def cb_handler(client, query):
                     callback_data="groupcb:" + group_id
                 )])
             except Exception:
+                logger.exception("Failed to render connection list group_id=%s user_id=%s",
+                                 group_id, query.from_user.id)
                 continue
         await query.answer()
         await query.message.edit_text(
@@ -250,7 +260,10 @@ async def cb_handler(client, query):
             if not isinstance(alerts, list) or index >= len(alerts) or not isinstance(alerts[index], str):
                 raise ValueError("Invalid alert")
             text = alerts[index].replace("\\n", "\n").replace("\\t", "\t")
-        except (ValueError, TypeError, IndexError, SyntaxError, MemoryError, RecursionError):
+        except (ValueError, TypeError, IndexError, SyntaxError, MemoryError, RecursionError) as exc:
+            logger.warning("Invalid alert callback chat_id=%s user_id=%s: %s",
+                           getattr(query.message.chat, "id", None), query.from_user.id,
+                           exc, exc_info=True)
             await query.answer("Alert unavailable.", show_alert=True)
             return
         await query.answer(text[:200], show_alert=True)

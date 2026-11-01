@@ -10,9 +10,10 @@ from config import ADD_FILTER_CMD, VIEW_FILTERS_COMMAND, DELETE_FILTER_CMD, DELE
 from database.auth_users import is_user_authorized
 from database.filters_mdb import add_filter, find_filter, get_filters, delete_filter, count_filters
 from database.connections_mdb import active_connection
-from database.users_mdb import add_or_update_user
+from helpers.user_activity import record_user_activity
 from helpers.use_bot import user_can_use_bot
 from helpers.logger import logger
+from helpers.error_handling import log_handler_errors
 from plugins.helpers import parser, split_quotes
 from plugins.button_codec import deserialize_buttons, serialize_buttons
 
@@ -24,21 +25,12 @@ async def _can_manage(client, user_id, group_id):
         member = await client.get_chat_member(int(group_id), int(user_id))
         return member.status in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER)
     except Exception:
+        logger.exception("Could not check group permissions user_id=%s group_id=%s", user_id, group_id)
         return False
 
 
 async def _save_user(message):
-    if SAVE_USER != "yes" or not message.from_user:
-        return
-    user = message.from_user
-    try:
-        await add_or_update_user(
-            str(user.id), str(user.username or "None"),
-            (user.first_name or "") + " " + (user.last_name or ""),
-            str(user.first_name or ""), str(user.dc_id or "None")
-        )
-    except Exception:
-        logger.exception("Could not update user activity")
+    await record_user_activity(message)
 
 
 async def _target_group(client, message):
@@ -51,6 +43,8 @@ async def _target_group(client, message):
             chat = await client.get_chat(group_id)
             return group_id, chat.title
         except Exception:
+            logger.exception("Failed to resolve connected group group_id=%s user_id=%s",
+                             group_id, message.from_user.id)
             await message.reply_text("Make sure I'm present in your group!", quote=True)
             return None
     if message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
@@ -59,6 +53,7 @@ async def _target_group(client, message):
 
 
 @Client.on_message(filters.command(ADD_FILTER_CMD))
+@log_handler_errors("plugins/filters.py:addfilter")
 async def addfilter(client, message):
     if not message.from_user:
         return
@@ -124,6 +119,7 @@ async def addfilter(client, message):
 
 
 @Client.on_message(filters.command(VIEW_FILTERS_COMMAND))
+@log_handler_errors("plugins/filters.py:get_all")
 async def get_all(client, message):
     if not message.from_user:
         return
@@ -136,17 +132,7 @@ async def get_all(client, message):
             quote=True
         )
         return
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     if chat_type == ChatType.PRIVATE:
         
         grpid = await active_connection(str(userid))
@@ -155,7 +141,8 @@ async def get_all(client, message):
             try:
                 chat = await client.get_chat(grpid)
                 title = chat.title
-            except:
+            except Exception:
+                logger.exception("Could not resolve group group_id=%s user_id=%s", grpid, userid)
                 await message.reply_text("Make sure I'm present in your group!!", quote=True)
                 return
         else:
@@ -200,6 +187,7 @@ async def get_all(client, message):
     )
         
 @Client.on_message(filters.command(DELETE_FILTER_CMD))
+@log_handler_errors("plugins/filters.py:deletefilter")
 async def deletefilter(client, message):
     if not message.from_user:
         return
@@ -210,17 +198,7 @@ async def deletefilter(client, message):
             quote=True
         )
         return
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     chat_type = message.chat.type
 
     if chat_type == ChatType.PRIVATE:
@@ -230,7 +208,8 @@ async def deletefilter(client, message):
             try:
                 chat = await client.get_chat(grpid)
                 title = chat.title
-            except:
+            except Exception:
+                logger.exception("Could not resolve group group_id=%s user_id=%s", grpid, userid)
                 await message.reply_text("Make sure I'm present in your group!!", quote=True)
                 return
         else:
@@ -252,7 +231,7 @@ async def deletefilter(client, message):
         if len(args) < 2:
             raise ValueError("No filter names provided")
         filters_to_delete = args[1:]
-    except:
+    except ValueError:
         view_filter_cmd = VIEW_FILTERS_COMMAND
         await message.reply_text(
             "<i>Mention the filtername which you wanna delete!</i>\n\n"
@@ -266,6 +245,7 @@ async def deletefilter(client, message):
         
 
 @Client.on_message(filters.command(DELETE_ALL_CMD))
+@log_handler_errors("plugins/filters.py:delallconfirm")
 async def delallconfirm(client, message):
     if not message.from_user:
         return
@@ -276,17 +256,7 @@ async def delallconfirm(client, message):
             quote=True
         )
         return
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     chat_type = message.chat.type
 
     if chat_type == ChatType.PRIVATE:
@@ -296,7 +266,8 @@ async def delallconfirm(client, message):
             try:
                 chat = await client.get_chat(grpid)
                 title = chat.title
-            except:
+            except Exception:
+                logger.exception("Could not resolve group group_id=%s user_id=%s", grpid, userid)
                 await message.reply_text("Make sure I'm present in your group!!", quote=True)
                 return
         else:
@@ -314,6 +285,7 @@ async def delallconfirm(client, message):
         st = await client.get_chat_member(grp_id, userid)
         owner = st.status == ChatMemberStatus.OWNER
     except Exception:
+        logger.exception("Could not check group owner user_id=%s group_id=%s", userid, grp_id)
         owner = False
     if owner or await is_user_authorized(userid):
         await message.reply_text(
@@ -327,11 +299,13 @@ async def delallconfirm(client, message):
 
 
 @Client.on_message(filters.group & filters.text)
+@log_handler_errors("plugins/filters.py:give_filter")
 async def give_filter(client, message):
     await _playback(message, message.chat.id)
 
 
 @Client.on_message(filters.private & filters.text)
+@log_handler_errors("plugins/filters.py:give_filter_private")
 async def give_filter_private(client, message):
     if not message.from_user or not await user_can_use_bot(message.from_user.id):
         return
@@ -360,7 +334,8 @@ async def _playback(message, group_id):
         try:
             buttons = deserialize_buttons(stored_buttons)
         except (ValueError, TypeError, SyntaxError, RecursionError) as exc:
-            logger.warning("Unsafe or malformed stored buttons rejected: %s", exc)
+            logger.warning("Rejected unsafe or malformed filter buttons group_id=%s keyword=%r: %s",
+                           group_id, keyword, exc, exc_info=True)
             buttons = []
         markup = InlineKeyboardMarkup(buttons) if buttons else None
         try:
@@ -371,5 +346,7 @@ async def _playback(message, group_id):
                 await message.reply_text(text, disable_web_page_preview=True,
                                          reply_markup=markup)
         except Exception:
-            logger.exception("Failed to send filter reply")
+            logger.exception("Failed to send filter reply group_id=%s keyword=%r chat_id=%s media=%s",
+                             group_id, keyword, getattr(message.chat, "id", None),
+                             file_id not in (None, "None"))
         return

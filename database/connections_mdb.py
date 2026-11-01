@@ -23,7 +23,8 @@ async def add_connection(group_id, user_id):
         })
         return True
     except Exception:
-        return False
+        logger.exception("Failed to create CONNECTION user_id=%s group_id=%s", user_id, group_id)
+        raise
 
 
 async def active_connection(user_id):

@@ -1,14 +1,17 @@
-from pyrogram import filters, Client
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from pyrogram.enums import ChatType, ChatMemberStatus
+from wzgram import filters, Client
+from wzgram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from wzgram.enums import ChatType, ChatMemberStatus
 from config import CONNECT_COMMAND, DISCONNECT_COMMAND, CONNECTIONS_COMMAND, SAVE_USER
 from database.connections_mdb import add_connection, all_connections, if_active, delete_connection,make_active,make_inactive
 from database.filters_mdb import del_all_filters_connection
-from database.users_mdb import add_or_update_user
+from helpers.user_activity import record_user_activity
+from helpers.error_handling import log_handler_errors
+from helpers.logger import logger
 from helpers.use_bot import user_can_use_bot
 from database.auth_users import is_user_authorized
 
 @Client.on_message((filters.private | filters.group) & filters.command(CONNECT_COMMAND))
+@log_handler_errors("plugins/connections.py:addconnection")
 async def addconnection(client, message):
     userid = str(message.from_user.id)  # Ensure userid is a string
 
@@ -20,17 +23,7 @@ async def addconnection(client, message):
         )
         return
     # Add user to database
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
 
     chat_type = message.chat.type
 
@@ -63,7 +56,7 @@ async def addconnection(client, message):
             await message.reply_text("You should be an admin or owner in the given group!", quote=True)
             return
     except Exception as e:
-        print(f"Error fetching chat member: {e}")
+        logger.exception("Failed to verify connect permissions user_id=%s group_id=%s", userid, group_id)
         await message.reply_text(
             "Invalid Group ID!\n\nIf correct, make sure I'm present in your group!!",
             quote=True
@@ -85,8 +78,9 @@ async def addconnection(client, message):
             if if_active_var:
                 await message.reply_text("You're already connected to this chat!", quote=True)
             else:
-                await make_inactive(userid)
-                await make_active(userid, group_id)
+                if not await make_active(userid, group_id):
+                    await message.reply_text("Could not activate that connection.", quote=True)
+                    return
                 await message.reply_text(
                     f"Successfully connected to **{title}**\nNow manage your group from my PM!",
                     quote=True
@@ -104,13 +98,14 @@ async def addconnection(client, message):
                     try:
                         await client.send_message(userid, f"Connected to **{title}**!")
                     except Exception:
-                        pass
+                        logger.exception("Connection saved but PM notification failed user_id=%s group_id=%s",
+                                         userid, group_id)
             else:
                 
                 await message.reply_text("You're already connected to this chat! Use connections command to make it active", quote=True)
     
     except Exception as e:
-        print(f"Error connecting to the group: {e}")
+        logger.exception("Connect request failed user_id=%s group_id=%s", userid, group_id)
         await message.reply_text(
             "Some error occurred! Try again later.",
             quote=True
@@ -118,6 +113,7 @@ async def addconnection(client, message):
 
 
 @Client.on_message((filters.private | filters.group) & filters.command(DISCONNECT_COMMAND))
+@log_handler_errors("plugins/connections.py:diconnectconnection")
 async def diconnectconnection(client,message):
     userid = message.from_user.id
 
@@ -127,17 +123,7 @@ async def diconnectconnection(client,message):
             quote=True
         )
         return
-    if SAVE_USER == "yes":  
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     
     chat_type = message.chat.type
     group_ids = await all_connections(str(userid))
@@ -183,26 +169,16 @@ async def diconnectconnection(client,message):
 
 
 @Client.on_message(filters.private & filters.command(CONNECTIONS_COMMAND))
+@log_handler_errors("plugins/connections.py:connections")
 async def connections(client,message):
     userid = message.from_user.id
-    print(userid)
     if not await user_can_use_bot(userid):
         await message.reply_text(
             "You are not authorized to use this bot.",
             quote=True
         )
         return
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     groupids = await all_connections(str(userid))
 
     if groupids is None or groupids == []:
@@ -228,11 +204,13 @@ async def connections(client,message):
                     )
                 ]
             )
-        except:
-            pass
+        except Exception:
+            logger.exception("Could not load connection button user_id=%s group_id=%s", userid, groupid)
     if buttons:
         await message.reply_text(
             "Your connected group details ;\n\n",
             reply_markup=InlineKeyboardMarkup(buttons),
             quote=True
         )
+    else:
+        await message.reply_text("No accessible groups found in your connections.", quote=True)

@@ -27,3 +27,7 @@ jobs:
         run: python -m pytest -q
       - name: Docker build smoke test
         run: docker build -t auto-filter-bot:ci .
+      - name: Verify writable log and session paths as non-root
+        run: |
+          docker run --rm --entrypoint python auto-filter-bot:ci -c "from helpers.logger import logger; from pathlib import Path; logger.error('smoke test'); assert Path('log.txt').is_file(); Path('filter_bot.session').touch(); assert Path('filter_bot.session').is_file()"
+

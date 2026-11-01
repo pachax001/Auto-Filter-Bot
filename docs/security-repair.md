@@ -41,3 +41,7 @@ logger.exception. Telegram clients receive generic failure messages and do
 not receive database credentials or stack traces. Rotating log backups
 (log.txt.1 through log.txt.3) are retained locally. Verify sensitive-data
 access controls before sending /log output.
+
+The Docker image runs as a non-root user. CI checks that this user can
+create the log and session files under /bot. Running with a read-only
+filesystem requires providing writable log and session paths.

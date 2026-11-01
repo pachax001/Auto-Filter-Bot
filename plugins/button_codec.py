@@ -24,6 +24,9 @@ def _validate(item):
     if len(available) != 1:
         raise ValueError("Exactly one button action is required")
     key, value = available[0]
+    if key == "url" and isinstance(value, str) and value.startswith(
+            ("t.me/", "www.t.me/", "telegram.me/", "www.telegram.me/")):
+        value = "https://" + value
     if key == "user_id":
         if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
             raise ValueError("Invalid user ID")

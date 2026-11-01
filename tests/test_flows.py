@@ -104,3 +104,72 @@ def test_destructive_confirmation_belongs_to_requester(monkeypatch):
     run(callbacks.cb_handler(None, q))
     removal.assert_not_awaited()
     q.answer.assert_awaited_once()
+
+def test_filter_write_preserves_existing_document_fields(monkeypatch):
+    collection = SimpleNamespace(update_one=AsyncMock())
+    monkeypatch.setattr(filters_mdb, "group_collection", lambda gid: collection)
+    assert run(filters_mdb.add_filter(-100, "hello", "Hi", "[]", None, []))
+    data = collection.update_one.await_args.args[1]["$set"]
+    assert set(data) == {"text", "reply", "btn", "file", "alert"}
+    assert data["file"] == "None"
+    assert data["btn"] == "[]"
+
+
+def test_formatted_group_addition_is_preserved(monkeypatch):
+    class DecoratedText(str):
+        @property
+        def html(self):
+            return "/add hello <b>world</b>"
+
+    monkeypatch.setattr(filter_handlers, "user_can_use_bot", AsyncMock(return_value=True))
+    monkeypatch.setattr(filter_handlers, "_can_manage", AsyncMock(return_value=True))
+    save = AsyncMock(return_value=True)
+    monkeypatch.setattr(filter_handlers, "add_filter", save)
+    monkeypatch.setattr(filter_handlers, "_save_user", AsyncMock())
+    message = SimpleNamespace(
+        text=DecoratedText("/add hello world"),
+        from_user=SimpleNamespace(id=23),
+        chat=SimpleNamespace(id=-100, type=ChatType.SUPERGROUP, title="Group"),
+        reply_to_message=None,
+        reply_text=AsyncMock(),
+    )
+    run(filter_handlers.addfilter(None, message))
+    save.assert_awaited_once()
+    assert save.await_args.args[2] == "<b>world</b>"
+
+
+def test_cross_group_delete_confirmation_rejected(monkeypatch):
+    delete = AsyncMock()
+    monkeypatch.setattr(callbacks, "del_all", delete)
+    query = make_query("delallconfirm:-100:22", user_id=22, private=False)
+    query.message.chat.id = -999
+    run(callbacks.cb_handler(None, query))
+    delete.assert_not_awaited()
+
+
+def test_valid_owner_delete_confirmation(monkeypatch):
+    monkeypatch.setattr(callbacks, "_can_delete_all", AsyncMock(return_value=True))
+    delete = AsyncMock()
+    monkeypatch.setattr(callbacks, "del_all", delete)
+    query = make_query("delallconfirm:-100:22", user_id=22, private=False)
+    client = SimpleNamespace(get_chat=AsyncMock(return_value=SimpleNamespace(title="Group")))
+    run(callbacks.cb_handler(client, query))
+    delete.assert_awaited_once_with(query.message, -100, "Group")
+
+
+def test_connection_switch_rejects_unauthorized_user(monkeypatch):
+    monkeypatch.setattr(callbacks, "_can_manage", AsyncMock(return_value=False))
+    change = AsyncMock()
+    monkeypatch.setattr(callbacks, "make_active", change)
+    query = make_query("connectcb:-100", user_id=22)
+    run(callbacks.cb_handler(None, query))
+    change.assert_not_awaited()
+
+
+def test_corrupt_alert_payload_is_rejected(monkeypatch):
+    monkeypatch.setattr(callbacks, "find_filter", AsyncMock(
+        return_value=("text", "[]", "__import__('os').system('echo test')", "None")
+    ))
+    query = make_query("alertmessage:0:keyword", private=False)
+    run(callbacks.cb_handler(None, query))
+    assert "unavailable" in query.answer.await_args.args[0].lower()

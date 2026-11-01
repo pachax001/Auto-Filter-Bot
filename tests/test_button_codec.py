@@ -59,3 +59,9 @@ def test_invalid_json_objects_are_rejected():
     with pytest.raises(ValueError):
         deserialize_buttons(json.dumps([[{"text": "x", "url": "https://example.org",
                                         "callback_data": "alert:0:x"}]]))
+
+def test_historical_telegram_url_shorthand():
+    button = deserialize_buttons(
+        "[[InlineKeyboardButton(text='Open', url='t.me/example')]]"
+    )
+    assert button[0][0].url == "https://t.me/example"

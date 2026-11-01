@@ -25,3 +25,5 @@ jobs:
         run: python -m compileall -q .
       - name: Offline regression tests
         run: python -m pytest -q
+      - name: Docker build smoke test
+        run: docker build -t auto-filter-bot:ci .

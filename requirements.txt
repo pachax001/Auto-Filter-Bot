@@ -1,7 +1,4 @@
-pyrofork
-TgCrypto
-umongo
-pymongo
-dnspython
-heroku3
-python-dotenv
+wzgram==3.1.5
+pymongo==4.19.0
+dnspython>=2.6,<3
+python-dotenv>=1.0,<2

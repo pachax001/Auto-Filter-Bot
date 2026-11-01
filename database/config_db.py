@@ -1,18 +1,6 @@
-from config import DATABASE_NAME,DATABASE_URI
-import pymongo
-db = pymongo.MongoClient(DATABASE_URI)[DATABASE_NAME]
-settings_collection = db["settings"]
+from config import get_public_mode as _get_public_mode
+from config import set_public_mode
 
-
-def set_public_mode(status: bool):
-    """Set the bot public mode status (True for on, False for off)."""
-    settings_collection.update_one(
-        {"key": "public_mode"},
-        {"$set": {"value": status}},
-        upsert=True
-    )
-
-def get_public_mode():
-    """Retrieve the current public mode status."""
-    setting = settings_collection.find_one({"key": "public_mode"})
-    return setting["value"] if setting else False  # Default to False if not found
+async def get_public_mode():
+    value = await _get_public_mode()
+    return bool(value) if value is not None else False

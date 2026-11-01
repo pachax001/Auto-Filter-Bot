@@ -11,9 +11,9 @@ from database.auth_users import is_user_authorized
 @Client.on_message((filters.private | filters.group) & filters.command(CONNECT_COMMAND))
 async def addconnection(client, message):
     userid = str(message.from_user.id)  # Ensure userid is a string
-    print(f"User ID: {userid}")
+
     user_id = message.from_user.id
-    if not user_can_use_bot(user_id):
+    if not await user_can_use_bot(user_id):
         await message.reply_text(
             "You are not authorized to use this bot.",
             quote=True
@@ -33,16 +33,16 @@ async def addconnection(client, message):
             pass
 
     chat_type = message.chat.type
-    print(f"Chat Type: {chat_type}")
+
     group_ids = await all_connections(userid)
-    print(f"Group IDs: {group_ids}")
+
     
     # Determine group ID depending on chat type (private or group)
     if chat_type == ChatType.PRIVATE:
         try:
             # Try to extract group ID from the command
             _, group_id_str = message.text.split(" ", 1)
-            group_id = str(group_id_str)
+            group_id = str(group_id_str).strip()
         except ValueError:
             await message.reply_text(
                 "<b>Enter the correct format!</b>\n\n"
@@ -56,10 +56,10 @@ async def addconnection(client, message):
     
     # Check if the user is an admin or in authorized users
     try:
-        st = await client.get_chat_member(group_id, userid)
-        print(f"User status: {st}")
+        st = await client.get_chat_member(int(group_id), int(userid))
 
-        if st.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER] and not is_user_authorized(int(userid)):
+
+        if st.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER] and not await is_user_authorized(int(userid)):
             await message.reply_text("You should be an admin or owner in the given group!", quote=True)
             return
     except Exception as e:
@@ -72,7 +72,7 @@ async def addconnection(client, message):
     
     # Check if the bot is an admin in the group
     try:
-        bot_status = await client.get_chat_member(group_id, "me")
+        bot_status = await client.get_chat_member(int(group_id), "me")
         if bot_status.status != ChatMemberStatus.ADMINISTRATOR:
             await message.reply_text("Add me as an admin in the group", quote=True)
             return
@@ -101,10 +101,10 @@ async def addconnection(client, message):
                 )
                 # Notify the user via private message if the chat is a group
                 if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-                    await client.send_message(
-                        userid,
-                        f"Connected to **{title}**!"
-                    )
+                    try:
+                        await client.send_message(userid, f"Connected to **{title}**!")
+                    except Exception:
+                        pass
             else:
                 
                 await message.reply_text("You're already connected to this chat! Use connections command to make it active", quote=True)
@@ -120,8 +120,8 @@ async def addconnection(client, message):
 @Client.on_message((filters.private | filters.group) & filters.command(DISCONNECT_COMMAND))
 async def diconnectconnection(client,message):
     userid = message.from_user.id
-    print(userid)
-    if not user_can_use_bot(userid):
+
+    if not await user_can_use_bot(userid):
         await message.reply_text(
             "You are not authorized to use this bot.",
             quote=True
@@ -155,8 +155,8 @@ async def diconnectconnection(client,message):
             )
             return
         group_id = str(group_id_str)
-        st = await client.get_chat_member(group_id, userid)
-        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
+        st = await client.get_chat_member(int(group_id), int(userid))
+        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or await is_user_authorized(int(userid))):
             return
         #delcon = await delete_connection(str(userid), str(group_id))
         if group_ids is not None and group_id in group_ids:
@@ -170,8 +170,8 @@ async def diconnectconnection(client,message):
     elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
         group_id = message.chat.id
 
-        st = await client.get_chat_member(group_id, userid)
-        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or is_user_authorized(int(userid))):
+        st = await client.get_chat_member(int(group_id), int(userid))
+        if not ((st.status == ChatMemberStatus.ADMINISTRATOR) or (st.status == ChatMemberStatus.OWNER) or await is_user_authorized(int(userid))):
             return
         if group_ids is not None and str(group_id) in group_ids:
             if_active_var = await if_active(str(userid), str(group_id))
@@ -186,7 +186,7 @@ async def diconnectconnection(client,message):
 async def connections(client,message):
     userid = message.from_user.id
     print(userid)
-    if not user_can_use_bot(userid):
+    if not await user_can_use_bot(userid):
         await message.reply_text(
             "You are not authorized to use this bot.",
             quote=True
@@ -204,7 +204,7 @@ async def connections(client,message):
         except:
             pass
     groupids = await all_connections(str(userid))
-    print(groupids)
+
     if groupids is None or groupids == []:
         await message.reply_text(
             "There are no active connections!! Connect to some groups first.",
@@ -224,7 +224,7 @@ async def connections(client,message):
             buttons.append(
                 [
                     InlineKeyboardButton(
-                        text=f"{title}{act}", callback_data=f"groupcb:{groupid}:{title}:{act}"
+                        text=f"{title}{act}", callback_data=f"groupcb:{groupid}"
                     )
                 ]
             )

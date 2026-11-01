@@ -21,7 +21,7 @@ import shlex
 @pachax001.on_message(filters.command('id') & (filters.private | filters.group))
 async def showid(client, message):
     userId = message.from_user.id
-    if user_can_use_bot(userId):
+    if await user_can_use_bot(userId):
         chat_type = message.chat.type
 
         if chat_type == ChatType.PRIVATE:
@@ -59,7 +59,7 @@ async def showid(client, message):
 @pachax001.on_message(filters.command('info') & (filters.private | filters.group))
 async def showinfo(client, message):
     userId = message.from_user.id
-    if user_can_use_bot(userId):
+    if await user_can_use_bot(userId):
         try:
             cmd, id = message.text.split(" ", 1)
         except:
@@ -67,7 +67,7 @@ async def showinfo(client, message):
             pass
 
         if id:
-            if (len(id) == 10 or len(id) == 9):
+            if id.strip().isdigit():
                 try:
                     checkid = int(id)
                 except:
@@ -126,7 +126,7 @@ async def showinfo(client, message):
 @pachax001.on_message((filters.private | filters.group) & filters.command('status'))
 async def bot_status(client,message):
     userId = message.from_user.id
-    if (is_user_authorized(userId) or userId == OWNER_ID):
+    if (await is_user_authorized(userId) or userId == OWNER_ID):
     # if (str(message.from_user.id)) not in Config.AUTH_USERS and (str(message.from_user.id)) != str(Config.OWNER_ID):
     #     return
 
@@ -174,7 +174,7 @@ async def start(client, message):
         total_users = await get_total_users()
         text = (
             f"👋 Hello, Owner (ID: <code>{OWNER_ID}</code>).\n\n"
-            f"🔓 <b>Bot Public Mode:</b> {'Enabled' if get_public_mode() else 'Disabled'}\n\n"
+            f"🔓 <b>Bot Public Mode:</b> {'Enabled' if await get_public_mode() else 'Disabled'}\n\n"
             f"👥 <b>Total Users:</b> {total_users}\n\n"
             "⚙️ Use the following commands to manage access:\n"
             "/authorize <user_id> - Grant access\n"
@@ -310,14 +310,15 @@ async def auth_user(client, message):
         user_id = int(user_id)
         if user_id == OWNER_ID:
             await message.reply_text("You can't authorize yourself.")
-        if is_user_authorized(user_id):
+            return
+        if await is_user_authorized(user_id):
             await message.reply_text("User is already authorized.")
             return
     except:
         await message.reply_text("Invalid user ID.")
         return
 
-    authorize_user(user_id)
+    await authorize_user(user_id)
     await message.reply_text(f"User {user_id} is now authorized to use the bot.")
 
 @pachax001.on_message(filters.command('deauth') & filters.private & filters.user(OWNER_ID))
@@ -332,14 +333,15 @@ async def deauth_user(client, message):
         user_id = int(user_id)
         if user_id == OWNER_ID:
             await message.reply_text("You can't deauthorize yourself.")
-        if not is_user_authorized(user_id):
+            return
+        if not await is_user_authorized(user_id):
             await message.reply_text("User is not authorized.")
             return
     except:
         await message.reply_text("Invalid user ID.")
         return
 
-    unauthorize_user(user_id)
+    await unauthorize_user(user_id)
     await message.reply_text(f"User {user_id} is no longer authorized to use the bot.")
 
 @pachax001.on_message(filters.command('authusers') & filters.private & filters.user(OWNER_ID))
@@ -358,8 +360,8 @@ async def list_auth_users(client, message):
 @pachax001.on_message(filters.command('public') & filters.private & filters.user(OWNER_ID))
 async def toggle_public_mode(client, message):
     try:
-        current = get_public_mode()
-        set_public_mode(not current)
+        current = await get_public_mode()
+        await set_public_mode(not current)
         await message.reply_text(f"Public mode turned {'off' if current else 'on'}.")
         try:
             # Broadcast the change to all users

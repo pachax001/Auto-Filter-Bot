@@ -13,7 +13,7 @@ async def broadcast_to_users(client: Client, message: str, batch_size=20, delay=
         batch_size (int): Number of users to send messages to in each batch.
         delay (float): Delay (in seconds) between each batch to avoid flooding.
     """
-    users = list(await get_all_users())  # Convert cursor to list
+    users = await (await get_all_users()).to_list(length=None)  # Convert cursor to list
     total_users = len(users)
     sent_count = 0
     failed_count = 0
@@ -45,7 +45,7 @@ async def broadcast_to_users(client: Client, message: str, batch_size=20, delay=
     logger.info(f"✅ Broadcast completed: {sent_count} messages sent, {failed_count} failed.")
 
     # Log broadcast results in database
-    log_broadcast_result(message, sent_count, failed_count, failed_users)
+    await log_broadcast_result(message, sent_count, failed_count, failed_users)
 
 async def send_message(client, user_id, message, failed_users):
     """

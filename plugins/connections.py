@@ -1,9 +1,8 @@
 from wzgram import filters, Client
 from wzgram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from wzgram.enums import ChatType, ChatMemberStatus
-from config import CONNECT_COMMAND, DISCONNECT_COMMAND, CONNECTIONS_COMMAND, SAVE_USER
-from database.connections_mdb import add_connection, all_connections, if_active, delete_connection,make_active,make_inactive
-from database.filters_mdb import del_all_filters_connection
+from config import CONNECT_COMMAND, DISCONNECT_COMMAND, CONNECTIONS_COMMAND
+from database.connections_mdb import add_connection, all_connections, if_active, make_active, make_inactive
 from helpers.user_activity import record_user_activity
 from helpers.error_handling import log_handler_errors
 from helpers.logger import logger
@@ -13,7 +12,9 @@ from database.auth_users import is_user_authorized
 @Client.on_message((filters.private | filters.group) & filters.command(CONNECT_COMMAND))
 @log_handler_errors("plugins/connections.py:addconnection")
 async def addconnection(client, message):
-    userid = str(message.from_user.id)  # Ensure userid is a string
+    if not message.from_user:
+        return
+    userid = str(message.from_user.id)
 
     user_id = message.from_user.id
     if not await user_can_use_bot(user_id):
@@ -47,21 +48,24 @@ async def addconnection(client, message):
     elif chat_type in [ChatType.SUPERGROUP, ChatType.GROUP]:
         group_id = str(message.chat.id)  # Use group ID from the chat
     
-    # Check if the user is an admin or in authorized users
+    else:
+        return
+    try:
+        group_id = str(int(group_id))
+    except (ValueError, TypeError):
+        await message.reply_text("Invalid group ID.", quote=True)
+        return
+
     try:
         st = await client.get_chat_member(int(group_id), int(userid))
-
-
-        if st.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER] and not await is_user_authorized(int(userid)):
+    except Exception:
+        logger.exception("Failed to verify connect permissions user_id=%s group_id=%s", userid, group_id)
+        await message.reply_text("Cannot access this group. Check bot logs.", quote=True)
+        return
+    if st.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER):
+        if not await is_user_authorized(int(userid)):
             await message.reply_text("You should be an admin or owner in the given group!", quote=True)
             return
-    except Exception as e:
-        logger.exception("Failed to verify connect permissions user_id=%s group_id=%s", userid, group_id)
-        await message.reply_text(
-            "Invalid Group ID!\n\nIf correct, make sure I'm present in your group!!",
-            quote=True
-        )
-        return
     
     # Check if the bot is an admin in the group
     try:
@@ -104,7 +108,7 @@ async def addconnection(client, message):
                 
                 await message.reply_text("You're already connected to this chat! Use connections command to make it active", quote=True)
     
-    except Exception as e:
+    except Exception:
         logger.exception("Connect request failed user_id=%s group_id=%s", userid, group_id)
         await message.reply_text(
             "Some error occurred! Try again later.",
@@ -115,6 +119,8 @@ async def addconnection(client, message):
 @Client.on_message((filters.private | filters.group) & filters.command(DISCONNECT_COMMAND))
 @log_handler_errors("plugins/connections.py:diconnectconnection")
 async def diconnectconnection(client,message):
+    if not message.from_user:
+        return
     userid = message.from_user.id
 
     if not await user_can_use_bot(userid):
@@ -171,6 +177,8 @@ async def diconnectconnection(client,message):
 @Client.on_message(filters.private & filters.command(CONNECTIONS_COMMAND))
 @log_handler_errors("plugins/connections.py:connections")
 async def connections(client,message):
+    if not message.from_user:
+        return
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(

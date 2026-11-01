@@ -10,7 +10,7 @@ logger.setLevel(logging.DEBUG)
 file_handler = RotatingFileHandler(
     "log.txt",
     maxBytes=5*1024*1024,  # 5 MB
-    backupCount=0,  # Keep up to 0 backup log files
+    backupCount=3,  # Retain three bounded log backups
     encoding="utf-8"
 )
 stream_handler = logging.StreamHandler(sys.stdout)

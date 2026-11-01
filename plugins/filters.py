@@ -125,6 +125,8 @@ async def addfilter(client, message):
 
 @Client.on_message(filters.command(VIEW_FILTERS_COMMAND))
 async def get_all(client, message):
+    if not message.from_user:
+        return
     
     chat_type = message.chat.type
     userid = message.from_user.id
@@ -199,6 +201,8 @@ async def get_all(client, message):
         
 @Client.on_message(filters.command(DELETE_FILTER_CMD))
 async def deletefilter(client, message):
+    if not message.from_user:
+        return
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(
@@ -263,6 +267,8 @@ async def deletefilter(client, message):
 
 @Client.on_message(filters.command(DELETE_ALL_CMD))
 async def delallconfirm(client, message):
+    if not message.from_user:
+        return
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(
@@ -313,8 +319,8 @@ async def delallconfirm(client, message):
         await message.reply_text(
             f"This will delete all filters from '{title}'.\nDo you want to continue??",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton(text="YES",callback_data="delallconfirm")],
-                [InlineKeyboardButton(text="CANCEL",callback_data="delallcancel")]
+                [InlineKeyboardButton(text="YES",callback_data=f"delallconfirm:{grp_id}:{userid}")],
+                [InlineKeyboardButton(text="CANCEL",callback_data=f"delallcancel:{grp_id}:{userid}")]
             ]),
             quote=True
         )
@@ -344,7 +350,7 @@ async def _playback(message, group_id):
     for keyword in sorted(keywords, key=len, reverse=True):
         if not keyword:
             continue
-        pattern = r"(^|[^\\w])" + re.escape(keyword) + r"($|[^\\w])"
+        pattern = r"(^|[^\w])" + re.escape(keyword) + r"($|[^\w])"
         if not re.search(pattern, content, flags=re.IGNORECASE):
             continue
         reply_text, stored_buttons, _, file_id = await find_filter(group_id, keyword)

@@ -15,7 +15,7 @@ from plugins.button_codec import _decode, serialize_buttons, deserialize_buttons
 def test_existing_button_formats(value):
     result = deserialize_buttons(value)
     assert isinstance(result, list)
-    assert deserialize_buttons(serialize_buttons(value)) == result
+    assert _decode(serialize_buttons(value)) == _decode(value)
 
 
 def test_new_button_format_is_json_and_not_executable():

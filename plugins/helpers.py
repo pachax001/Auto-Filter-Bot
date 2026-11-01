@@ -89,10 +89,7 @@ def parser(text, keyword):
     else:
         note_data += text[prev:]
 
-    try:
-        return note_data, buttons, alerts
-    except:
-        return note_data, buttons, None
+    return note_data, buttons, alerts
 
 def remove_escapes(text: str) -> str:
     counter = 0

@@ -63,7 +63,7 @@ python -m compileall -q .
 python -m pytest -q
 ```
 
-These tests do not send Telegram messages and do not modify MongoDB.
+Packages use the latest resolver-selected stable versions, without pins. Review CI after dependency upgrades.\n\nThese tests do not send Telegram messages and do not modify MongoDB.
 A separate staging validation is required for Telegram and database integration.
 
 ## Credits

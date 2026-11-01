@@ -25,7 +25,7 @@ async def add_filter(grp_id, text, reply_text, btn, file, alert):
         )
         return True
     except Exception:
-        logger.exception("Failed to save filter")
+        logger.exception("Failed to save filter group_id=%s keyword=%r", grp_id, text)
         return False
 
 
@@ -73,7 +73,7 @@ async def del_all_filters_connection(group_id):
         await group_collection(group_id).drop()
         return 2
     except Exception:
-        logger.exception("Unable to delete group filters")
+        logger.exception("Unable to delete group filters group_id=%s", group_id)
         return None
 
 

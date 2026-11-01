@@ -1,3 +1,4 @@
+from helpers.logger import logger
 from config import db
 
 mycol = db["CONNECTION"]
@@ -32,6 +33,7 @@ async def active_connection(user_id):
     try:
         return int(row["active_group"])
     except (ValueError, TypeError):
+        logger.warning("Invalid active_group saved in CONNECTION user_id=%s", user_id)
         return None
 
 

@@ -1,26 +1,31 @@
-# log_config.py
+"""Application and WZGram logging, including tracebacks in Docker and /log."""
 import logging
-from logging.handlers import RotatingFileHandler
+import os
 import sys
-# Configure logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from logging.handlers import RotatingFileHandler
 
-# Create handlers
-file_handler = RotatingFileHandler(
-    "log.txt",
-    maxBytes=5*1024*1024,  # 5 MB
-    backupCount=3,  # Retain three bounded log backups
-    encoding="utf-8"
-)
-stream_handler = logging.StreamHandler(sys.stdout)
+FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(filename)s:%(lineno)d %(message)s"
+root = logging.getLogger()
+root.setLevel(logging.INFO)
 
-# Create formatters and add them to the handlers
+# Avoid adding the same handlers if imported again.
+if not any(getattr(handler, "_auto_filter_handler", False) for handler in root.handlers):
+    formatter = logging.Formatter(FORMAT)
+    console = logging.StreamHandler(sys.stdout)
+    console.setFormatter(formatter)
+    console._auto_filter_handler = True
+    root.addHandler(console)
 
-formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s')  # Include filename and line number
-file_handler.setFormatter(formatter)
-stream_handler.setFormatter(formatter)
+    file_handler = RotatingFileHandler(
+        os.getenv("BOT_LOG_FILE", "log.txt"),
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+    file_handler._auto_filter_handler = True
+    root.addHandler(file_handler)
 
-# Add handlers to the logger
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+# WZGram uses the 'pyrogram' logger internally.
+logging.getLogger("pyrogram").setLevel(logging.INFO)
+logger = logging.getLogger("auto_filter_bot")

@@ -14,4 +14,4 @@ async def log_broadcast_result(message: str, sent_count: int, failed_count: int,
             "timestamp": datetime.now(timezone.utc)
         })
     except Exception:
-        logger.exception("Failed to log broadcast")
+        logger.exception("Failed to save BROADCAST result sent=%s failed=%s", sent_count, failed_count)

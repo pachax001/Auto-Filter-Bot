@@ -31,4 +31,13 @@ legacy values are ignored at playback while text/media still attempts delivery.
 5. Only then deploy with the same DATABASE_NAME and DATABASE_URI; keep
    rollback image and DB backup until satisfied.
 
-Runtime: Python 3.10+, WZGram 3.1.5, native PyMongo async 4.19.0.
+Runtime: Python 3.10+, current stable WZGram and native async PyMongo.
+Dependencies are intentionally unpinned in requirements.txt. Review and test
+the resolved package versions in CI before deployment because future latest
+versions may introduce breaking changes.
+
+Errors: log.txt and Docker stdout capture full exception tracebacks via
+logger.exception. Telegram clients receive generic failure messages and do
+not receive database credentials or stack traces. Rotating log backups
+(log.txt.1 through log.txt.3) are retained locally. Verify sensitive-data
+access controls before sending /log output.

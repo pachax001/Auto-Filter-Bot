@@ -1,5 +1,5 @@
 import asyncio
-from pyrogram import Client
+from wzgram import Client
 from database.users_mdb import get_all_users
 from helpers.logger import logger
 from database.broadcast import log_broadcast_result
@@ -63,7 +63,7 @@ async def send_message(client, user_id, message, failed_users):
     try:
         await client.send_message(chat_id=user_id, text=message)
         return True
-    except Exception as e:
-        logger.error(f"❌ Failed to send message to {user_id}: {e}")
+    except Exception:
+        logger.exception("Broadcast send failed user_id=%s", user_id)
         failed_users.append(user_id)
         return False

@@ -73,7 +73,7 @@ async def addfilter(client, message):
     if not await _can_manage(client, user_id, group_id):
         await message.reply_text("Group admin privileges required.", quote=True)
         return
-    parts = (message.text or "").split(None, 1)
+    parts = (message.text.html if hasattr(message.text, "html") else (message.text or "")).split(None, 1)
     if len(parts) < 2:
         await message.reply_text("Command incomplete!", quote=True)
         return

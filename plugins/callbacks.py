@@ -1,28 +1,45 @@
 import ast
-
-from pyrogram import Client as pachax001
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ChatType, ChatMemberStatus
+from wzgram import Client
+from wzgram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from wzgram.enums import ChatType, ChatMemberStatus
 from database.auth_users import is_user_authorized
-
-#from config import Config
-
+from helpers.logger import logger
+from helpers.error_handling import log_handler_errors
+from helpers.use_bot import user_can_use_bot
 from script import Script
-from database.filters_mdb import del_all, find_filter, del_all_filters_connection
-
-from database.connections_mdb import(
-    all_connections,
-    active_connection,
-    if_active,
-    delete_connection,
-    make_active,
-    make_inactive
+from database.filters_mdb import del_all, find_filter
+from database.connections_mdb import (
+    all_connections, active_connection, if_active, delete_connection,
+    make_active, make_inactive
 )
 
 
-@pachax001.on_callback_query()
-async def cb_handler(client, query):
+async def _can_manage(client, user_id, group_id):
+    if await is_user_authorized(user_id):
+        return True
+    try:
+        member = await client.get_chat_member(int(group_id), int(user_id))
+        return member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
+    except Exception:
+        logger.exception("Callback group permission lookup failed user_id=%s group_id=%s", user_id, group_id)
+        return False
 
+
+async def _can_delete_all(client, user_id, group_id):
+    if await is_user_authorized(user_id):
+        return True
+    try:
+        member = await client.get_chat_member(int(group_id), int(user_id))
+        return member.status == ChatMemberStatus.OWNER
+    except Exception:
+        return False
+
+
+@Client.on_callback_query()
+@log_handler_errors("plugins/callbacks.py:cb_handler")
+async def cb_handler(client, query):
+    if not query.from_user or not query.data:
+        return
     if query.data == "start_data":
         await query.answer()
         keyboard = InlineKeyboardMarkup(
@@ -88,213 +105,169 @@ async def cb_handler(client, query):
         await query.message.delete()
         
 
-    elif query.data == "delallconfirm":
-        userid = query.from_user.id
-        chat_type = query.message.chat.type
-
-        if chat_type == ChatType.PRIVATE:
-            grpid  = await active_connection(str(userid))
-            if grpid is not None:
-                grp_id = grpid
-                try:
-                    chat = await client.get_chat(grpid)
-                    title = chat.title
-                except:
-                    await query.message.edit_text("Make sure I'm present in your group!!", quote=True)
-                    return
-            else:
-                await query.message.edit_text(
-                    "I'm not connected to any groups!\nCheck /connections or connect to any groups",
-                    quote=True
-                )
-                return
-
-        elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
-            grp_id = query.message.chat.id
-            title = query.message.chat.title
-
-        else:
+    elif query.data.startswith("delallconfirm:"):
+        try:
+            _, group_id, requestor = query.data.split(":", 2)
+            group_id = int(group_id)
+            if int(requestor) != query.from_user.id:
+                raise ValueError("Wrong requestor")
+            if query.message.chat.type == ChatType.PRIVATE:
+                if await active_connection(query.from_user.id) != group_id:
+                    raise ValueError("Different active connection")
+            elif query.message.chat.id != group_id:
+                raise ValueError("Wrong chat")
+        except (ValueError, TypeError, AttributeError):
+            await query.answer("This confirmation is no longer valid.", show_alert=True)
             return
-
-        st = await client.get_chat_member(grp_id, userid)
-        #if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):
-        if (st.status == ChatMemberStatus.OWNER) or is_user_authorized(userid):    
-            await del_all(query.message, grp_id, title)
-        else:
-            await query.answer("You need to be Group Owner or an Auth User to do that!",show_alert=True)
-    
-    elif query.data == "delallcancel":
-        userid = query.from_user.id
-        chat_type = query.message.chat.type
-        
-        if chat_type == ChatType.PRIVATE:
-            await query.message.reply_to_message.delete()
-            await query.message.delete()
-
-        elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
-            grp_id = query.message.chat.id
-            st = await client.get_chat_member(grp_id, userid)
-            # if (st.status == ChatMemberStatus.OWNER) or (str(userid) in Config.AUTH_USERS):
-            if (st.status == ChatMemberStatus.OWNER) or is_user_authorized(userid):
-                await query.message.delete()
-                try:
-                    await query.message.reply_to_message.delete()
-                except:
-                    pass
-            else:
-                await query.answer("Thats not for you!!",show_alert=True)
-
-
-    elif "groupcb" in query.data:
+        if not await _can_delete_all(client, query.from_user.id, group_id):
+            await query.answer("Only the group owner or authorized user may delete all filters.", show_alert=True)
+            return
+        try:
+            title = (await client.get_chat(group_id)).title
+        except Exception:
+            logger.exception("Callback group lookup failed group_id=%s user_id=%s",
+                             group_id, query.from_user.id)
+            await query.answer("Group unavailable", show_alert=True)
+            return
         await query.answer()
+        await del_all(query.message, group_id, title)
+        return
 
-        group_id = query.data.split(":")[1]
-        title = query.data.split(":")[2]
-        act = query.data.split(":")[3]
-        user_id = query.from_user.id
+    elif query.data.startswith("delallcancel:"):
+        try:
+            requestor = int(query.data.rsplit(":", 1)[1])
+        except ValueError:
+            return
+        if requestor != query.from_user.id:
+            await query.answer("This confirmation belongs to another user.", show_alert=True)
+            return
+        await query.answer("Cancelled")
+        await query.message.delete()
+        return
 
-        if act == "":
-            stat = "CONNECT"
-            cb = "connectcb"
-        else:
-            stat = "DISCONNECT"
-            cb = "disconnect"
-
+    elif query.data.startswith("groupcb:"):
+        if query.message.chat.type != ChatType.PRIVATE:
+            await query.answer("Use connections in private chat.", show_alert=True)
+            return
+        group_id = query.data.split(":", 2)[1]
+        groups = await all_connections(query.from_user.id)
+        if not groups or group_id not in groups or not await _can_manage(client, query.from_user.id, group_id):
+            await query.answer("Connection is no longer available.", show_alert=True)
+            return
+        try:
+            title = (await client.get_chat(int(group_id))).title
+        except Exception:
+            logger.exception("Group details unavailable for callback user_id=%s group_id=%s",
+                             query.from_user.id, group_id)
+            await query.answer("Group unavailable", show_alert=True)
+            return
+        active = await if_active(query.from_user.id, group_id)
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(f"{stat}", callback_data=f"{cb}:{group_id}:{title}"),
-                InlineKeyboardButton("DELETE", callback_data=f"deletecb:{group_id}")],
+            [InlineKeyboardButton("DISCONNECT" if active else "CONNECT",
+                                  callback_data=("disconnect:" if active else "connectcb:") + group_id),
+             InlineKeyboardButton("DELETE", callback_data="deletecb:" + group_id)],
             [InlineKeyboardButton("BACK", callback_data="backcb")]
         ])
-
+        await query.answer()
         await query.message.edit_text(
-            f"Group Name : **{title}**\nGroup ID : `{group_id}`",
-            reply_markup=keyboard
+            f"Group Name : **{title}**\nGroup ID : `{group_id}`", reply_markup=keyboard
         )
         return
 
-    elif "connectcb" in query.data:
+    elif query.data.startswith("connectcb:"):
+        if query.message.chat.type != ChatType.PRIVATE:
+            await query.answer("Private connections only.", show_alert=True)
+            return
+        group_id = query.data.split(":", 2)[1]
+        if not await _can_manage(client, query.from_user.id, group_id):
+            await query.answer("Group admin privileges required.", show_alert=True)
+            return
+        activated = await make_active(query.from_user.id, group_id)
         await query.answer()
+        await query.message.edit_text(
+            "Connected." if activated else "Connection is no longer available."
+        )
+        return
 
-        group_id = query.data.split(":")[1]
-        title = query.data.split(":")[2]
-        user_id = query.from_user.id
-
-        mkact = await make_active(str(user_id), str(group_id))
-
-        if mkact:
-            await query.message.edit_text(
-                f"Connected to **{title}**"
-            )
+    elif query.data.startswith("disconnect:"):
+        if query.message.chat.type != ChatType.PRIVATE:
+            await query.answer("Private connections only.", show_alert=True)
             return
-        else:
-            await query.message.edit_text(
-                f"Some error occured!!"
-            )
+        group_id = query.data.split(":", 2)[1]
+        if not await if_active(query.from_user.id, group_id):
+            await query.answer("This is not your active connection.", show_alert=True)
             return
-
-    elif "disconnect" in query.data:
+        inactive = await make_inactive(query.from_user.id)
         await query.answer()
+        await query.message.edit_text("Disconnected." if inactive else "Already disconnected.")
+        return
 
-        title = query.data.split(":")[2]
-        user_id = query.from_user.id
-
-        mkinact = await make_inactive(str(user_id))
-
-        if mkinact:
-            await query.message.edit_text(
-                f"Disconnected from **{title}**"
-            )
+    elif query.data.startswith("deletecb:"):
+        # Removing one user's connection must NEVER delete a group's shared filters.
+        if query.message.chat.type != ChatType.PRIVATE:
+            await query.answer("Private connections only.", show_alert=True)
             return
-        else:
-            await query.message.edit_text(
-                f"Some error occured!!"
-            )
-            return
-    elif "deletecb" in query.data:
+        group_id = query.data.split(":", 2)[1]
+        removed = await delete_connection(query.from_user.id, group_id)
         await query.answer()
+        await query.message.edit_text(
+            "Connection deleted. Group filters were kept." if removed else "Connection not found."
+        )
+        return
 
-        user_id = query.from_user.id
-        group_id = query.data.split(":")[1]
-
-        delcon = await delete_connection(str(user_id), str(group_id))
-
-        if delcon:
-            del_all_filters = await del_all_filters_connection(group_id)
-            if del_all_filters == 1:
-                await query.message.edit_text(
-                    "Successfully deleted connection\nNo filters to delete"
-                )
-                return
-            elif del_all_filters == 2:
-                await query.message.edit_text(
-                    "Successfully deleted connection\nAll filters deleted"
-                )
-                return
-            else:
-                await query.message.edit_text(
-                    "Successfully deleted connection\nSome error occured in deleting filters"
-                )
-                return
-        else:
-            await query.message.edit_text(
-                f"Some error occured!!"
-            )
-            return
-    
     elif query.data == "backcb":
-        await query.answer()
-
-        userid = query.from_user.id
-
-        groupids = await all_connections(str(userid))
-        if groupids is None:
-            await query.message.edit_text(
-                "There are no active connections!! Connect to some groups first.",
-            )
+        if query.message.chat.type != ChatType.PRIVATE:
+            await query.answer("Private connections only.", show_alert=True)
             return
-        buttons = []
-        for groupid in groupids:
+        groups = await all_connections(query.from_user.id) or []
+        keyboard = []
+        for group_id in groups:
+            if not await _can_manage(client, query.from_user.id, group_id):
+                continue
             try:
-                ttl = await client.get_chat(int(groupid))
-                title = ttl.title
-                active = await if_active(str(userid), str(groupid))
-                if active:
-                    act = " - ACTIVE"
-                else:
-                    act = ""
-                buttons.append(
-                    [
-                        InlineKeyboardButton(
-                            text=f"{title}{act}", callback_data=f"groupcb:{groupid}:{title}:{act}"
-                        )
-                    ]
-                )
-            except:
-                pass
-        if buttons:
-            await query.message.edit_text(
-                "Your connected group details ;\n\n",
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
+                title = (await client.get_chat(int(group_id))).title
+                active = await if_active(query.from_user.id, group_id)
+                keyboard.append([InlineKeyboardButton(
+                    title + (" - ACTIVE" if active else ""),
+                    callback_data="groupcb:" + group_id
+                )])
+            except Exception:
+                logger.exception("Failed to render connection list group_id=%s user_id=%s",
+                                 group_id, query.from_user.id)
+                continue
+        await query.answer()
+        await query.message.edit_text(
+            "Your connected groups:" if keyboard else "No accessible connections.",
+            reply_markup=InlineKeyboardMarkup(keyboard) if keyboard else None
+        )
+        return
 
-    elif "alertmessage" in query.data:
-        chat_type = query.message.chat.type
-        grp_id = query.message.chat.id
-        i = query.data.split(":")[1]
-        keyword = query.data.split(":")[2]
-        if chat_type == ChatType.PRIVATE:
-            grpid = await active_connection(str(query.from_user.id))
-            if grpid is not None:
-                grp_id = grpid
-            else:
-                await query.answer("I'm not connected to any groups!\nCheck /connections or connect to any groups",show_alert=True)
-                return
-        reply_text, btn, alerts, fileid = await find_filter(grp_id, keyword)
-        if alerts is not None:
-            alerts = ast.literal_eval(alerts)
-            alert = alerts[int(i)]
-            alert = alert.replace("\\n", "\n").replace("\\t", "\t")
-            await query.answer(alert,show_alert=True)
+    elif query.data.startswith("alertmessage:"):
+        try:
+            _, index, keyword = query.data.split(":", 2)
+            index = int(index)
+            if index < 0:
+                raise ValueError("Invalid alert")
+            group_id = query.message.chat.id
+            if query.message.chat.type == ChatType.PRIVATE:
+                group_id = await active_connection(query.from_user.id)
+                if group_id is None or not await _can_manage(client, query.from_user.id, group_id):
+                    raise ValueError("No accessible connection")
+            _, _, stored_alerts, _ = await find_filter(group_id, keyword)
+            if not isinstance(stored_alerts, str) or len(stored_alerts) > 20000:
+                raise ValueError("Missing alert")
+            alerts = ast.literal_eval(stored_alerts)
+            if not isinstance(alerts, list) or index >= len(alerts) or not isinstance(alerts[index], str):
+                raise ValueError("Invalid alert")
+            text = alerts[index].replace("\\n", "\n").replace("\\t", "\t")
+        except (ValueError, TypeError, IndexError, SyntaxError, MemoryError, RecursionError) as exc:
+            logger.warning("Invalid alert callback chat_id=%s user_id=%s: %s",
+                           getattr(query.message.chat, "id", None), query.from_user.id,
+                           exc, exc_info=True)
+            await query.answer("Alert unavailable.", show_alert=True)
+            return
+        await query.answer(text[:200], show_alert=True)
+        return
     elif "help_filters" in query.data:
         await query.answer()
         keyboard = InlineKeyboardMarkup(

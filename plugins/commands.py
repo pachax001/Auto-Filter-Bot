@@ -1,17 +1,19 @@
 import time
 import shutil
-from pyrogram.types import Message
-from pyrogram import filters
-from pyrogram import Client as pachax001
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ChatType, ParseMode
+from wzgram.types import Message
+from wzgram import filters
+from wzgram import Client as pachax001
+from wzgram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from wzgram.enums import ChatType, ParseMode
 import os
 from config import OWNER_ID, BOT_START_TIME, SAVE_USER
 from database.auth_users import authorize_user,load_authorized_users,is_user_authorized,unauthorize_user
 from script import Script
 from plugins.helpers import humanbytes
 from database.filters_mdb import filter_stats
-from database.users_mdb import find_user, add_or_update_user,get_total_users,get_recent_users
+from database.users_mdb import find_user, get_total_users,get_recent_users
+from helpers.user_activity import record_user_activity
+from helpers.error_handling import log_handler_errors
 from helpers.broadcast import broadcast_to_users
 from helpers.use_bot import user_can_use_bot
 from helpers.broadcast import broadcast_to_users
@@ -19,16 +21,16 @@ from database.config_db import get_public_mode, set_public_mode
 from helpers.logger import logger
 import shlex
 @pachax001.on_message(filters.command('id') & (filters.private | filters.group))
+@log_handler_errors("plugins/commands.py:showid")
 async def showid(client, message):
     userId = message.from_user.id
-    if user_can_use_bot(userId):
+    if await user_can_use_bot(userId):
         chat_type = message.chat.type
 
         if chat_type == ChatType.PRIVATE:
             user_id = message.chat.id
             await message.reply_text(
-                f"Your ID : `{user_id}`",
-                quote=True
+                f"Your ID : `{user_id}`"
             )
         else:  # This handles both "group" and "supergroup"
             user_id = message.from_user.id
@@ -39,42 +41,31 @@ async def showid(client, message):
                 reply_id = f"Replied User ID : `{message.reply_to_message.from_user.id}`"
 
             await message.reply_text(
-                f"Your ID : `{user_id}`\nThis Group ID : `{chat_id}`\n\n{reply_id}",
-                quote=True
+                f"Your ID : `{user_id}`\nThis Group ID : `{chat_id}`\n\n{reply_id}"
             )
-            if SAVE_USER == "yes":
-                try:
-                    await add_or_update_user(
-                        str(message.from_user.id),
-                        str(message.from_user.username) or "None",
-                        str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                        str(message.from_user.first_name),
-                        str(message.from_user.dc_id)
-                    )
-                except:
-                    pass
+            await record_user_activity(message)
     else:
         await message.reply_text("You are not authorized to use this bot.")
 
 @pachax001.on_message(filters.command('info') & (filters.private | filters.group))
+@log_handler_errors("plugins/commands.py:showinfo")
 async def showinfo(client, message):
     userId = message.from_user.id
-    if user_can_use_bot(userId):
+    if await user_can_use_bot(userId):
         try:
             cmd, id = message.text.split(" ", 1)
-        except:
+        except ValueError:
             id = False
-            pass
 
         if id:
-            if (len(id) == 10 or len(id) == 9):
+            if id.strip().isdigit():
                 try:
                     checkid = int(id)
-                except:
-                    await message.reply_text("__Enter a valid USER ID__", quote=True)
+                except ValueError:
+                    await message.reply_text("__Enter a valid USER ID__")
                     return
             else:
-                await message.reply_text("__Enter a valid USER ID__", quote=True)
+                await message.reply_text("__Enter a valid USER ID__")
                 return           
 
             if SAVE_USER == "yes":
@@ -85,9 +76,9 @@ async def showinfo(client, message):
                     name = str(user.first_name + (user.last_name or ""))
                     username = user.username
                     dcid = user.dc_id
-                except:
+                except Exception:
+                    logger.exception("Failed to get user information target_user_id=%s", id)
                     name = False
-                    pass
 
             if not name:
                 await message.reply_text("__USER Details not found!!__")
@@ -116,17 +107,17 @@ async def showinfo(client, message):
             f"<b>User ID</b> : <code>{id}</code>\n\n"
             f"<b>Username</b> : {user_name}\n\n"
             f"<b>Permanant USER link</b> : <a href='tg://user?id={id}'>Click here!</a>\n\n"
-            f"<b>DC ID</b> : {dcid}\n\n",
-            quote=True
+            f"<b>DC ID</b> : {dcid}\n\n"
         )
     else:
         await message.reply_text("You are not authorized to use this bot.")
 
 
 @pachax001.on_message((filters.private | filters.group) & filters.command('status'))
+@log_handler_errors("plugins/commands.py:bot_status")
 async def bot_status(client,message):
     userId = message.from_user.id
-    if (is_user_authorized(userId) or userId == OWNER_ID):
+    if (await is_user_authorized(userId) or userId == OWNER_ID):
     # if (str(message.from_user.id)) not in Config.AUTH_USERS and (str(message.from_user.id)) != str(Config.OWNER_ID):
     #     return
 
@@ -151,7 +142,8 @@ async def bot_status(client,message):
             disk = "\n**Disk Details**\n\n" \
                 f"> USED  :  {used} / {total}\n" \
                 f"> FREE  :  {free}\n\n"
-        except:
+        except OSError:
+            logger.exception("Failed to inspect disk usage for status command")
             disk = ""
 
         await message.reply_text(
@@ -159,8 +151,7 @@ async def bot_status(client,message):
             f"> __**{filters}** filters across **{chats}** chats__\n\n"
             f"{userstats}"
             f"> __BOT Uptime__ : **{uptime}**\n\n"
-            f"{disk}",
-            quote=True
+            f"{disk}"
         )
     else:
         await message.reply_text("You are not authorized to use this bot.")
@@ -168,17 +159,18 @@ async def bot_status(client,message):
 
 
 @pachax001.on_message(filters.command('start') & filters.private)
+@log_handler_errors("plugins/commands.py:start")
 async def start(client, message):
 
     if message.from_user.id == OWNER_ID:
         total_users = await get_total_users()
         text = (
             f"👋 Hello, Owner (ID: <code>{OWNER_ID}</code>).\n\n"
-            f"🔓 <b>Bot Public Mode:</b> {'Enabled' if get_public_mode() else 'Disabled'}\n\n"
+            f"🔓 <b>Bot Public Mode:</b> {'Enabled' if await get_public_mode() else 'Disabled'}\n\n"
             f"👥 <b>Total Users:</b> {total_users}\n\n"
             "⚙️ Use the following commands to manage access:\n"
-            "/authorize <user_id> - Grant access\n"
-            "/unauthorize <user_id> - Revoke access\n\n"
+            "/auth <user_id> - Grant access\n"
+            "/deauth <user_id> - Revoke access\n\n"
             "📄 Use /help to see all available commands."
         )
         await message.reply_text(text, parse_mode=ParseMode.HTML) 
@@ -201,32 +193,13 @@ async def start(client, message):
         ),
         reply_to_message_id=message.id
     )
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
 
 
 @pachax001.on_message(filters.command('help') & filters.private)
+@log_handler_errors("plugins/commands.py:help")
 async def help(client, message):
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     await message.reply_text(
         text=Script.HELP_MSG,
         disable_web_page_preview=True,
@@ -247,18 +220,9 @@ async def help(client, message):
 
 
 @pachax001.on_message(filters.command('about') & filters.private)
+@log_handler_errors("plugins/commands.py:about")
 async def about(client, message):
-    if SAVE_USER == "yes":
-        try:
-            await add_or_update_user(
-                str(message.from_user.id),
-                str(message.from_user.username) or "None",
-                str(message.from_user.first_name + " " + (message.from_user.last_name or "")),
-                str(message.from_user.first_name),
-                str(message.from_user.dc_id)
-            )
-        except:
-            pass
+    await record_user_activity(message)
     bot_details = await client.get_me()
     first_name = bot_details.first_name
     await message.reply_text(
@@ -280,6 +244,7 @@ async def about(client, message):
     )
 
 @pachax001.on_message(filters.command('log') & filters.private & filters.user(OWNER_ID))
+@log_handler_errors("plugins/commands.py:send_log")
 async def send_log(client, message):
     if os.path.exists("log.txt"):
         await message.reply_document(document="log.txt")
@@ -288,21 +253,23 @@ async def send_log(client, message):
 
 
 @pachax001.on_message(filters.command('broadcast') & filters.private & filters.user(OWNER_ID))
+@log_handler_errors("plugins/commands.py:manual_broadcast_command")
 async def manual_broadcast_command(client, message):
     #shlex is used to split the string into a list of arguments
     try:
         cmd, msg = message.text.split(" ", 1)
-    except:
+    except ValueError:
         await message.reply_text("Please provide a message.")
         return
     await broadcast_to_users(client, msg)
     
 
 @pachax001.on_message(filters.command('auth') & filters.private & filters.user(OWNER_ID))
+@log_handler_errors("plugins/commands.py:auth_user")
 async def auth_user(client, message):
     try:
         cmd, user_id = message.text.split(" ", 1)
-    except:
+    except ValueError:
         await message.reply_text("Please provide a user ID.")
         return
 
@@ -310,21 +277,23 @@ async def auth_user(client, message):
         user_id = int(user_id)
         if user_id == OWNER_ID:
             await message.reply_text("You can't authorize yourself.")
-        if is_user_authorized(user_id):
+            return
+        if await is_user_authorized(user_id):
             await message.reply_text("User is already authorized.")
             return
-    except:
+    except ValueError:
         await message.reply_text("Invalid user ID.")
         return
 
-    authorize_user(user_id)
+    await authorize_user(user_id)
     await message.reply_text(f"User {user_id} is now authorized to use the bot.")
 
 @pachax001.on_message(filters.command('deauth') & filters.private & filters.user(OWNER_ID))
+@log_handler_errors("plugins/commands.py:deauth_user")
 async def deauth_user(client, message):
     try:
         cmd, user_id = message.text.split(" ", 1)
-    except:
+    except ValueError:
         await message.reply_text("Please provide a user ID.")
         return
 
@@ -332,17 +301,19 @@ async def deauth_user(client, message):
         user_id = int(user_id)
         if user_id == OWNER_ID:
             await message.reply_text("You can't deauthorize yourself.")
-        if not is_user_authorized(user_id):
+            return
+        if not await is_user_authorized(user_id):
             await message.reply_text("User is not authorized.")
             return
-    except:
+    except ValueError:
         await message.reply_text("Invalid user ID.")
         return
 
-    unauthorize_user(user_id)
+    await unauthorize_user(user_id)
     await message.reply_text(f"User {user_id} is no longer authorized to use the bot.")
 
 @pachax001.on_message(filters.command('authusers') & filters.private & filters.user(OWNER_ID))
+@log_handler_errors("plugins/commands.py:list_auth_users")
 async def list_auth_users(client, message):
     users = await load_authorized_users()
     if not users:
@@ -356,10 +327,11 @@ async def list_auth_users(client, message):
     await message.reply_text(text)  
 
 @pachax001.on_message(filters.command('public') & filters.private & filters.user(OWNER_ID))
+@log_handler_errors("plugins/commands.py:toggle_public_mode")
 async def toggle_public_mode(client, message):
     try:
-        current = get_public_mode()
-        set_public_mode(not current)
+        current = await get_public_mode()
+        await set_public_mode(not current)
         await message.reply_text(f"Public mode turned {'off' if current else 'on'}.")
         try:
             # Broadcast the change to all users
@@ -370,11 +342,11 @@ async def toggle_public_mode(client, message):
 )
 
             await broadcast_to_users(client, broadcast_messaage)
-        except Exception as e:
-            logger.error(f"An error occurred while broadcasting: {e}")
-    except Exception as e:
-        await message.reply_text(f"An error occurred: {e}")
-        logger.error(f"An error occurred: {e}")
+        except Exception:
+            logger.exception("Public mode updated but broadcast failed owner_id=%s", message.from_user.id)
+    except Exception:
+        logger.exception("Failed to update public mode owner_id=%s", message.from_user.id)
+        await message.reply_text("Unable to update public mode. Check bot logs.")
 
 
 

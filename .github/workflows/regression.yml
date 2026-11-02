@@ -1,0 +1,33 @@
+name: Regression checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [fix/security-async-wzgram-20261101]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Syntax validation
+        run: python -m compileall -q .
+      - name: Offline regression tests
+        run: python -m pytest -q
+      - name: Docker build smoke test
+        run: docker build -t auto-filter-bot:ci .
+      - name: Verify writable log and session paths as non-root
+        run: |
+          docker run --rm --entrypoint python auto-filter-bot:ci -c "from helpers.logger import logger; from pathlib import Path; logger.error('smoke test'); assert Path('log.txt').is_file(); Path('filter_bot.session').touch(); assert Path('filter_bot.session').is_file()"
+

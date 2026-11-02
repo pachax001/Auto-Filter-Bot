@@ -1,5 +1,5 @@
 import asyncio
-from pyrogram import Client
+from wzgram import Client
 from database.users_mdb import get_all_users
 from helpers.logger import logger
 from database.broadcast import log_broadcast_result
@@ -13,7 +13,7 @@ async def broadcast_to_users(client: Client, message: str, batch_size=20, delay=
         batch_size (int): Number of users to send messages to in each batch.
         delay (float): Delay (in seconds) between each batch to avoid flooding.
     """
-    users = list(await get_all_users())  # Convert cursor to list
+    users = await (await get_all_users()).to_list(length=None)  # Convert cursor to list
     total_users = len(users)
     sent_count = 0
     failed_count = 0
@@ -45,7 +45,7 @@ async def broadcast_to_users(client: Client, message: str, batch_size=20, delay=
     logger.info(f"✅ Broadcast completed: {sent_count} messages sent, {failed_count} failed.")
 
     # Log broadcast results in database
-    log_broadcast_result(message, sent_count, failed_count, failed_users)
+    await log_broadcast_result(message, sent_count, failed_count, failed_users)
 
 async def send_message(client, user_id, message, failed_users):
     """
@@ -63,7 +63,7 @@ async def send_message(client, user_id, message, failed_users):
     try:
         await client.send_message(chat_id=user_id, text=message)
         return True
-    except Exception as e:
-        logger.error(f"❌ Failed to send message to {user_id}: {e}")
+    except Exception:
+        logger.exception("Broadcast send failed user_id=%s", user_id)
         failed_users.append(user_id)
         return False

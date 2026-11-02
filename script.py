@@ -27,7 +27,7 @@ Usual commands:
 
 ⭕️<b>Language :</b> <code>Python3</code>
 
-⭕️<b>Library :</b> <a href='https://pyrofork.mayuri.my.id/main/'>Pyrofork</a> 
+⭕️<b>Library :</b> <a href='https://wzgram.com/'>WZGram</a> 
 
 """
     FILTER_HELP = f"""

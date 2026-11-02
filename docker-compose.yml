@@ -1,9 +1,11 @@
 services:
   bot:
     build: .
-    container_name: auto-filter-bot-public
+    container_name: auto-filter-bot
     volumes:
       - ./data:/bot/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     env_file:
       - config.env
     restart: unless-stopped

@@ -50,10 +50,10 @@ async def delete_filter(message, text, group_id):
     result = await group_collection(group_id).delete_one({"text": text})
     if result.deleted_count:
         await message.reply_text(
-            "Filter deleted: " + text, quote=True
+            "Filter deleted: " + text
         )
     else:
-        await message.reply_text("Couldn't find that filter!", quote=True)
+        await message.reply_text("Couldn't find that filter!")
 
 
 async def del_all(message, group_id, title):

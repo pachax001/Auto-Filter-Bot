@@ -37,7 +37,7 @@ async def _target_group(client, message):
     if message.chat.type == ChatType.PRIVATE:
         group_id = await active_connection(message.from_user.id)
         if group_id is None:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text("I'm not connected to any groups!")
             return None
         try:
             chat = await client.get_chat(group_id)
@@ -45,7 +45,7 @@ async def _target_group(client, message):
         except Exception:
             logger.exception("Failed to resolve connected group group_id=%s user_id=%s",
                              group_id, message.from_user.id)
-            await message.reply_text("Make sure I'm present in your group!", quote=True)
+            await message.reply_text("Make sure I'm present in your group!")
             return None
     if message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
         return message.chat.id, message.chat.title
@@ -59,27 +59,27 @@ async def addfilter(client, message):
         return
     user_id = message.from_user.id
     if not await user_can_use_bot(user_id):
-        await message.reply_text("You are not authorized to use this bot.", quote=True)
+        await message.reply_text("You are not authorized to use this bot.")
         return
     target = await _target_group(client, message)
     if target is None:
         return
     group_id, title = target
     if not await _can_manage(client, user_id, group_id):
-        await message.reply_text("Group admin privileges required.", quote=True)
+        await message.reply_text("Group admin privileges required.")
         return
     parts = (message.text.html if hasattr(message.text, "html") else (message.text or "")).split(None, 1)
     if len(parts) < 2:
-        await message.reply_text("Command incomplete!", quote=True)
+        await message.reply_text("Command incomplete!")
         return
     extracted = split_quotes(parts[1])
     if not extracted or not extracted[0].strip():
-        await message.reply_text("Specify a filter name.", quote=True)
+        await message.reply_text("Specify a filter name.")
         return
     keyword = extracted[0].lower().strip()
     source = message.reply_to_message
     if source is None and len(extracted) < 2:
-        await message.reply_text("Add some content to save your filter!", quote=True)
+        await message.reply_text("Add some content to save your filter!")
         return
     media = None
     body = extracted[1] if len(extracted) > 1 else ""
@@ -103,18 +103,18 @@ async def addfilter(client, message):
     )
     file_id = media.file_id if media else None
     if not reply_text and file_id is None:
-        await message.reply_text("You cannot create an empty text filter.", quote=True)
+        await message.reply_text("You cannot create an empty text filter.")
         return
     try:
         # Validate before writing. Stored 'btn' stays a string, now JSON.
         buttons = serialize_buttons(buttons)
     except (ValueError, TypeError, SyntaxError, RecursionError) as exc:
-        await message.reply_text(f"Invalid buttons: {exc}", quote=True)
+        await message.reply_text(f"Invalid buttons: {exc}")
         return
     if not await add_filter(group_id, keyword, reply_text, buttons, file_id, alert):
-        await message.reply_text("Could not save the filter. Check the bot logs.", quote=True)
+        await message.reply_text("Could not save the filter. Check the bot logs.")
         return
-    await message.reply_text(f"Filter for `{keyword}` added in **{title}**", quote=True)
+    await message.reply_text(f"Filter for `{keyword}` added in **{title}**")
     await _save_user(message)
 
 
@@ -128,8 +128,7 @@ async def get_all(client, message):
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(
-            "You are not authorized to use this bot.",
-            quote=True
+            "You are not authorized to use this bot."
         )
         return
     await record_user_activity(message)
@@ -143,10 +142,10 @@ async def get_all(client, message):
                 title = chat.title
             except Exception:
                 logger.exception("Could not resolve group group_id=%s user_id=%s", grpid, userid)
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text("Make sure I'm present in your group!!")
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text("I'm not connected to any groups!")
             return
 
     elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
@@ -174,16 +173,14 @@ async def get_all(client, message):
                 keyword_file.name = "keywords.txt"
                 await message.reply_document(
                     document=keyword_file,
-                    caption=f"Total number of filters in **{title}** : {count}",
-                    quote=True
+                    caption=f"Total number of filters in **{title}** : {count}"
                 )
             return
     else:
         filterlist = f"There are no active filters in **{title}**"
 
     await message.reply_text(
-        text=filterlist,
-        quote=True
+        text=filterlist
     )
         
 @Client.on_message(filters.command(DELETE_FILTER_CMD))
@@ -194,8 +191,7 @@ async def deletefilter(client, message):
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(
-            "You are not authorized to use this bot.",
-            quote=True
+            "You are not authorized to use this bot."
         )
         return
     await record_user_activity(message)
@@ -210,10 +206,10 @@ async def deletefilter(client, message):
                 title = chat.title
             except Exception:
                 logger.exception("Could not resolve group group_id=%s user_id=%s", grpid, userid)
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text("Make sure I'm present in your group!!")
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text("I'm not connected to any groups!")
             return
 
     elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
@@ -236,8 +232,7 @@ async def deletefilter(client, message):
         await message.reply_text(
             "<i>Mention the filtername which you wanna delete!</i>\n\n"
             "<code>/del filtername</code>\n\n"
-            f"Use /{view_filter_cmd} to view all available filters",
-            quote=True
+            f"Use /{view_filter_cmd} to view all available filters"
         )
         return
     for filter_name in filters_to_delete:
@@ -252,8 +247,7 @@ async def delallconfirm(client, message):
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(
-            "You are not authorized to use this bot.",
-            quote=True
+            "You are not authorized to use this bot."
         )
         return
     await record_user_activity(message)
@@ -268,10 +262,10 @@ async def delallconfirm(client, message):
                 title = chat.title
             except Exception:
                 logger.exception("Could not resolve group group_id=%s user_id=%s", grpid, userid)
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text("Make sure I'm present in your group!!")
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text("I'm not connected to any groups!")
             return
 
     elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
@@ -293,8 +287,7 @@ async def delallconfirm(client, message):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton(text="YES",callback_data=f"delallconfirm:{grp_id}:{userid}")],
                 [InlineKeyboardButton(text="CANCEL",callback_data=f"delallcancel:{grp_id}:{userid}")]
-            ]),
-            quote=True
+            ])
         )
 
 

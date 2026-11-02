@@ -19,8 +19,7 @@ async def addconnection(client, message):
     user_id = message.from_user.id
     if not await user_can_use_bot(user_id):
         await message.reply_text(
-            "You are not authorized to use this bot.",
-            quote=True
+            "You are not authorized to use this bot."
         )
         return
     # Add user to database
@@ -41,8 +40,7 @@ async def addconnection(client, message):
             await message.reply_text(
                 "<b>Enter the correct format!</b>\n\n"
                 "<code>/connect groupid</code>\n\n"
-                "<i>Get your Group ID by adding this bot to your group and use <code>/id</code></i>",
-                quote=True
+                "<i>Get your Group ID by adding this bot to your group and use <code>/id</code></i>"
             )
             return
     elif chat_type in [ChatType.SUPERGROUP, ChatType.GROUP]:
@@ -53,25 +51,25 @@ async def addconnection(client, message):
     try:
         group_id = str(int(group_id))
     except (ValueError, TypeError):
-        await message.reply_text("Invalid group ID.", quote=True)
+        await message.reply_text("Invalid group ID.")
         return
 
     try:
         st = await client.get_chat_member(int(group_id), int(userid))
     except Exception:
         logger.exception("Failed to verify connect permissions user_id=%s group_id=%s", userid, group_id)
-        await message.reply_text("Cannot access this group. Check bot logs.", quote=True)
+        await message.reply_text("Cannot access this group. Check bot logs.")
         return
     if st.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER):
         if not await is_user_authorized(int(userid)):
-            await message.reply_text("You should be an admin or owner in the given group!", quote=True)
+            await message.reply_text("You should be an admin or owner in the given group!")
             return
     
     # Check if the bot is an admin in the group
     try:
         bot_status = await client.get_chat_member(int(group_id), "me")
         if bot_status.status != ChatMemberStatus.ADMINISTRATOR:
-            await message.reply_text("Add me as an admin in the group", quote=True)
+            await message.reply_text("Add me as an admin in the group")
             return
         
         # Get group title and add connection
@@ -80,22 +78,20 @@ async def addconnection(client, message):
         if group_ids is not None and group_id in group_ids:
             if_active_var = await if_active(userid, group_id)
             if if_active_var:
-                await message.reply_text("You're already connected to this chat!", quote=True)
+                await message.reply_text("You're already connected to this chat!")
             else:
                 if not await make_active(userid, group_id):
-                    await message.reply_text("Could not activate that connection.", quote=True)
+                    await message.reply_text("Could not activate that connection.")
                     return
                 await message.reply_text(
-                    f"Successfully connected to **{title}**\nNow manage your group from my PM!",
-                    quote=True
+                    f"Successfully connected to **{title}**\nNow manage your group from my PM!"
                 )
         else:
             addcon = await add_connection(group_id, userid)
             
             if addcon:
                 await message.reply_text(
-                    f"Successfully connected to **{title}**\nNow manage your group from my PM!",
-                    quote=True
+                    f"Successfully connected to **{title}**\nNow manage your group from my PM!"
                 )
                 # Notify the user via private message if the chat is a group
                 if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
@@ -106,13 +102,12 @@ async def addconnection(client, message):
                                          userid, group_id)
             else:
                 
-                await message.reply_text("You're already connected to this chat! Use connections command to make it active", quote=True)
+                await message.reply_text("You're already connected to this chat! Use connections command to make it active")
     
     except Exception:
         logger.exception("Connect request failed user_id=%s group_id=%s", userid, group_id)
         await message.reply_text(
-            "Some error occurred! Try again later.",
-            quote=True
+            "Some error occurred! Try again later."
         )
 
 
@@ -125,8 +120,7 @@ async def diconnectconnection(client,message):
 
     if not await user_can_use_bot(userid):
         await message.reply_text(
-            "You are not authorized to use this bot.",
-            quote=True
+            "You are not authorized to use this bot."
         )
         return
     await record_user_activity(message)
@@ -142,8 +136,7 @@ async def diconnectconnection(client,message):
                 f"<code>/{DISCONNECT_COMMAND} groupid</code>\n\n"
                 "<i>Get your Group ID by adding this bot to your group and use <code>/id</code></i>\n\n"
                 "<b>OR</b>\n\n"
-                f"<code>send /{DISCONNECT_COMMAND}</code> as a message to the group",
-                quote=True
+                f"<code>send /{DISCONNECT_COMMAND}</code> as a message to the group"
             )
             return
         group_id = str(group_id_str)
@@ -155,9 +148,9 @@ async def diconnectconnection(client,message):
             if_active_var = await if_active(str(userid), str(group_id))
             if if_active_var:
                 await make_inactive(str(userid))
-                await message.reply_text("Successfully disconnected from this chat", quote=True)
+                await message.reply_text("Successfully disconnected from this chat")
             else:
-                await message.reply_text("This chat is already disconnected", quote=True)
+                await message.reply_text("This chat is already disconnected")
 
     elif (chat_type == ChatType.GROUP) or (chat_type == ChatType.SUPERGROUP):
         group_id = message.chat.id
@@ -169,9 +162,9 @@ async def diconnectconnection(client,message):
             if_active_var = await if_active(str(userid), str(group_id))
             if if_active_var:
                 await make_inactive(str(userid))
-                await message.reply_text("Successfully disconnected from this chat", quote=True)
+                await message.reply_text("Successfully disconnected from this chat")
             else:
-                await message.reply_text("This chat is already disconnected", quote=True)
+                await message.reply_text("This chat is already disconnected")
 
 
 @Client.on_message(filters.private & filters.command(CONNECTIONS_COMMAND))
@@ -182,8 +175,7 @@ async def connections(client,message):
     userid = message.from_user.id
     if not await user_can_use_bot(userid):
         await message.reply_text(
-            "You are not authorized to use this bot.",
-            quote=True
+            "You are not authorized to use this bot."
         )
         return
     await record_user_activity(message)
@@ -191,8 +183,7 @@ async def connections(client,message):
 
     if groupids is None or groupids == []:
         await message.reply_text(
-            "There are no active connections!! Connect to some groups first.",
-            quote=True
+            "There are no active connections!! Connect to some groups first."
         )
         return
     buttons = []
@@ -217,8 +208,7 @@ async def connections(client,message):
     if buttons:
         await message.reply_text(
             "Your connected group details ;\n\n",
-            reply_markup=InlineKeyboardMarkup(buttons),
-            quote=True
+            reply_markup=InlineKeyboardMarkup(buttons)
         )
     else:
-        await message.reply_text("No accessible groups found in your connections.", quote=True)
+        await message.reply_text("No accessible groups found in your connections.")

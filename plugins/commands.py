@@ -30,8 +30,7 @@ async def showid(client, message):
         if chat_type == ChatType.PRIVATE:
             user_id = message.chat.id
             await message.reply_text(
-                f"Your ID : `{user_id}`",
-                quote=True
+                f"Your ID : `{user_id}`"
             )
         else:  # This handles both "group" and "supergroup"
             user_id = message.from_user.id
@@ -42,8 +41,7 @@ async def showid(client, message):
                 reply_id = f"Replied User ID : `{message.reply_to_message.from_user.id}`"
 
             await message.reply_text(
-                f"Your ID : `{user_id}`\nThis Group ID : `{chat_id}`\n\n{reply_id}",
-                quote=True
+                f"Your ID : `{user_id}`\nThis Group ID : `{chat_id}`\n\n{reply_id}"
             )
             await record_user_activity(message)
     else:
@@ -64,10 +62,10 @@ async def showinfo(client, message):
                 try:
                     checkid = int(id)
                 except ValueError:
-                    await message.reply_text("__Enter a valid USER ID__", quote=True)
+                    await message.reply_text("__Enter a valid USER ID__")
                     return
             else:
-                await message.reply_text("__Enter a valid USER ID__", quote=True)
+                await message.reply_text("__Enter a valid USER ID__")
                 return           
 
             if SAVE_USER == "yes":
@@ -109,8 +107,7 @@ async def showinfo(client, message):
             f"<b>User ID</b> : <code>{id}</code>\n\n"
             f"<b>Username</b> : {user_name}\n\n"
             f"<b>Permanant USER link</b> : <a href='tg://user?id={id}'>Click here!</a>\n\n"
-            f"<b>DC ID</b> : {dcid}\n\n",
-            quote=True
+            f"<b>DC ID</b> : {dcid}\n\n"
         )
     else:
         await message.reply_text("You are not authorized to use this bot.")
@@ -154,8 +151,7 @@ async def bot_status(client,message):
             f"> __**{filters}** filters across **{chats}** chats__\n\n"
             f"{userstats}"
             f"> __BOT Uptime__ : **{uptime}**\n\n"
-            f"{disk}",
-            quote=True
+            f"{disk}"
         )
     else:
         await message.reply_text("You are not authorized to use this bot.")

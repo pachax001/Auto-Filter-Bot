@@ -25,7 +25,7 @@ def log_handler_errors(action):
                         await update.answer("Something went wrong. Check bot logs.", show_alert=True)
                     elif hasattr(update, "reply_text"):
                         await update.reply_text(
-                            "Something went wrong. Check bot logs.", quote=True
+                            "Something went wrong. Check bot logs."
                         )
                 except Exception:
                     logger.exception(

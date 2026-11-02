@@ -31,6 +31,7 @@ class TelegramText(str):
     ('/add "The \\"Special\\" One" Details', 'The "Special" One', "Details"),
     ('/add “Dive into You” Details', "Dive into You", "Details"),
     ('/add ‘Misha’s car’ Details', "Misha’s car", "Details"),
+    ("/add 'Misha's car' Details", "Misha's car", "Details"),
     ("/add Misha's Details", "Misha's", "Details"),
     (r"/add C:\Movies Details", r"C:\Movies", "Details"),
     ('/add "C:\\Movies" Details', r"C:\Movies", "Details"),

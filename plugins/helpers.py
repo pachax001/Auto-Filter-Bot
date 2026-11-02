@@ -39,6 +39,13 @@ def _split_first_filter_name(text: str):
                 name.append(text[index + 1])
                 index += 2
             elif char == closing:
+                # Apostrophes inside words are literal, even when the outer
+                # delimiter is a single quote: 'Misha's car' or ‘Misha’s car’.
+                if (closing in ("'", "’") and index > 0 and index + 1 < len(text)
+                        and text[index - 1].isalnum() and text[index + 1].isalnum()):
+                    name.append(char)
+                    index += 1
+                    continue
                 index += 1
                 if index < len(text) and not text[index].isspace():
                     raise ValueError("Add a space after the closing quote.")

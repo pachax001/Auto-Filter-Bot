@@ -1,9 +1,9 @@
 import io
 import re
-import shlex
+from html import escape
 
 from wzgram import Client, filters
-from wzgram.enums import ChatType, ChatMemberStatus
+from wzgram.enums import ChatType, ChatMemberStatus, ParseMode
 from wzgram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import ADD_FILTER_CMD, VIEW_FILTERS_COMMAND, DELETE_FILTER_CMD, DELETE_ALL_CMD, SAVE_USER
@@ -15,7 +15,7 @@ from helpers.use_bot import user_can_use_bot
 from helpers.logger import logger
 from helpers.error_handling import log_handler_errors
 from helpers.filter_auto_delete import schedule_filter_deletion
-from plugins.helpers import parser, split_quotes
+from plugins.helpers import parser, split_filter_command, split_filter_names
 from plugins.button_codec import deserialize_buttons, serialize_buttons
 
 
@@ -69,21 +69,20 @@ async def addfilter(client, message):
     if not await _can_manage(client, user_id, group_id):
         await message.reply_text("Group admin privileges required.")
         return
-    parts = (message.text.html if hasattr(message.text, "html") else (message.text or "")).split(None, 1)
-    if len(parts) < 2:
-        await message.reply_text("Command incomplete!")
+    try:
+        name, body = split_filter_command(message.text)
+    except ValueError as exc:
+        await message.reply_text(f"Invalid filter name: {exc}")
         return
-    extracted = split_quotes(parts[1])
-    if not extracted or not extracted[0].strip():
-        await message.reply_text("Specify a filter name.")
+    if not name:
+        await message.reply_text("Specify a filter name. Use quotes for multi-word names.")
         return
-    keyword = extracted[0].lower().strip()
+    keyword = name.lower()
     source = message.reply_to_message
-    if source is None and len(extracted) < 2:
+    if source is None and not body:
         await message.reply_text("Add some content to save your filter!")
         return
     media = None
-    body = extracted[1] if len(extracted) > 1 else ""
     if source is not None:
         media = next(
             (item for item in (source.document, source.video, source.photo,
@@ -115,7 +114,10 @@ async def addfilter(client, message):
     if not await add_filter(group_id, keyword, reply_text, buttons, file_id, alert):
         await message.reply_text("Could not save the filter. Check the bot logs.")
         return
-    await message.reply_text(f"Filter for `{keyword}` added in **{title}**")
+    await message.reply_text(
+        f"Filter for <code>{escape(keyword)}</code> added in <b>{escape(title or '')}</b>",
+        parse_mode=ParseMode.HTML,
+    )
     await _save_user(message)
 
 
@@ -163,9 +165,11 @@ async def get_all(client, message):
     count = await count_filters(grp_id)
     if count:
         texts = sorted(texts)
-        filterlist = f"Total number of filters in **{title}** : {count}\n\n"
-        keywords = "\n".join(f"{idx + 1}.  `{text}`" for idx, text in enumerate(texts))
-        filterlist = f"Total number of filters in **{title}** : {count}\n\n{keywords}"
+        keywords = "\n".join(
+            f"{idx + 1}.  <code>{escape(text)}</code>"
+            for idx, text in enumerate(texts)
+        )
+        filterlist = f"Total number of filters in <b>{escape(title or '')}</b> : {count}\n\n{keywords}"
         doc_keywords = "\n".join(f"{idx + 1}.  {text}" for idx, text in enumerate(texts))
         doc_filterlist = f"Total number of filters in {title} : {count}\n\n{doc_keywords}"
         if len(filterlist) > 4096:
@@ -178,10 +182,11 @@ async def get_all(client, message):
                 )
             return
     else:
-        filterlist = f"There are no active filters in **{title}**"
+        filterlist = f"There are no active filters in <b>{escape(title or '')}</b>"
 
     await message.reply_text(
-        text=filterlist
+        text=filterlist,
+        parse_mode=ParseMode.HTML,
     )
         
 @Client.on_message(filters.command(DELETE_FILTER_CMD))
@@ -224,16 +229,19 @@ async def deletefilter(client, message):
         return
 
     try:
-        args = shlex.split(message.text)
-        if len(args) < 2:
+        command = re.match(r"^\s*\S+\s+", str(message.text or ""))
+        if command is None:
             raise ValueError("No filter names provided")
-        filters_to_delete = args[1:]
+        filters_to_delete = split_filter_names(str(message.text)[command.end():])
+        if not filters_to_delete:
+            raise ValueError("No filter names provided")
     except ValueError:
         view_filter_cmd = VIEW_FILTERS_COMMAND
         await message.reply_text(
             "<i>Mention the filtername which you wanna delete!</i>\n\n"
             "<code>/del filtername</code>\n\n"
-            f"Use /{view_filter_cmd} to view all available filters"
+            f"Use /{view_filter_cmd} to view all available filters\n"
+            'Put multi-word names in quotes, escaping embedded quotation marks.'
         )
         return
     for filter_name in filters_to_delete:

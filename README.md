@@ -74,6 +74,24 @@ in groups or supergroups (typically administrator access with delete-messages
 rights). Without these permissions, the bot may remove its own reply but
 cannot remove the trigger message. Existing filters in MongoDB are unaffected.
 
+
+## Quoted filter names
+
+Use quotes around multi-word keywords. Names are case-insensitive on matching
+and stored in lowercase, while original quotes are not part of the keyword.
+
+- \`/add "Dive into You" Reply text\`
+- \`/add "Misha's car" Reply text\`
+- \`/add 'Misha\'s car' Reply text\` (escape the inner apostrophe)
+- \`/add "The \"Special\" One" Reply text\` (escape the inner double quotes)
+- \`/del "Dive into You" "Misha's car"\` (multiple names)
+- \`/del "The \"Special\" One"\`
+
+Straight and smart quotation pairs are supported. A plain single-word keyword
+such as \`Misha's\` can be used without quoting. Unclosed quotes are rejected
+instead of silently creating a truncated keyword. Formatting in filter reply
+content is preserved independently of keyword parsing.
+
 ## Before deploying to an existing database
 
 Read [the database and security repair notes](docs/security-repair.md).

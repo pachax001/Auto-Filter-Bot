@@ -48,7 +48,7 @@ def parser(text, keyword):
         # Check if btnurl is escaped
         n_escapes = 0
         to_check = match.start(1) - 1
-        while to_check > 0 and text[to_check] == "\\":
+        while to_check >= 0 and text[to_check] == "\\":
             n_escapes += 1
             to_check -= 1
 
@@ -89,10 +89,7 @@ def parser(text, keyword):
     else:
         note_data += text[prev:]
 
-    try:
-        return note_data, buttons, alerts
-    except:
-        return note_data, buttons, None
+    return note_data, buttons, alerts
 
 def remove_escapes(text: str) -> str:
     counter = 0

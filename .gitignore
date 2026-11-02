@@ -1,4 +1,16 @@
 config.env
+.env
+.env.*
 __pycache__/
-**.session
+*.pyc
+*.session
+*.session-journal
+*.session-shm
+*.session-wal
 venv/
+.venv/
+.pytest_cache/
+log.txt
+*.log
+backups/
+data/

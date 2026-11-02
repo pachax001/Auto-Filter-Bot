@@ -14,6 +14,7 @@ from helpers.user_activity import record_user_activity
 from helpers.use_bot import user_can_use_bot
 from helpers.logger import logger
 from helpers.error_handling import log_handler_errors
+from helpers.filter_auto_delete import schedule_filter_deletion
 from plugins.helpers import parser, split_quotes
 from plugins.button_codec import deserialize_buttons, serialize_buttons
 
@@ -332,12 +333,15 @@ async def _playback(message, group_id):
             buttons = []
         markup = InlineKeyboardMarkup(buttons) if buttons else None
         try:
+            sent = None
             if file_id is not None and file_id != "None":
-                await message.reply_cached_media(file_id, caption=text or "",
-                                                 reply_markup=markup)
+                sent = await message.reply_cached_media(file_id, caption=text or "",
+                                                        reply_markup=markup)
             elif text:
-                await message.reply_text(text, disable_web_page_preview=True,
-                                         reply_markup=markup)
+                sent = await message.reply_text(text, disable_web_page_preview=True,
+                                                reply_markup=markup)
+            if sent is not None:
+                await schedule_filter_deletion(message, sent)
         except Exception:
             logger.exception("Failed to send filter reply group_id=%s keyword=%r chat_id=%s media=%s",
                              group_id, keyword, getattr(message.chat, "id", None),

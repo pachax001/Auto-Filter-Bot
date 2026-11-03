@@ -1,5 +1,6 @@
 from config import db
 from helpers.logger import logger
+from wzgram.enums import ParseMode
 
 EXCLUDED_COLLECTIONS = {"CONNECTION", "USERS", "authorised_users", "settings", "BROADCAST"}
 
@@ -50,7 +51,7 @@ async def delete_filter(message, text, group_id):
     result = await group_collection(group_id).delete_one({"text": text})
     if result.deleted_count:
         await message.reply_text(
-            "Filter deleted: " + text
+            "Filter deleted: " + text, parse_mode=ParseMode.DISABLED
         )
     else:
         await message.reply_text("Couldn't find that filter!")

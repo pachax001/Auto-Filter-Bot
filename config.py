@@ -21,6 +21,19 @@ CONNECT_COMMAND = os.getenv("CONNECT_COMMAND", "connect")
 DISCONNECT_COMMAND = os.getenv("DISCONNECT_COMMAND", "disconnect")
 CONNECTIONS_COMMAND = os.getenv("CONNECTIONS_COMMAND", "connections")
 VIEW_FILTERS_COMMAND = os.getenv("VIEW_FILTERS_COMMAND", "filters")
+def _parse_filter_auto_delete_seconds(value):
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("FILTER_AUTO_DELETE_SECONDS must be an integer") from exc
+    if not 0 <= seconds < 48 * 60 * 60:
+        raise ValueError("FILTER_AUTO_DELETE_SECONDS must be 0 or between 1 and 172799")
+    return seconds
+
+
+FILTER_AUTO_DELETE_SECONDS = _parse_filter_auto_delete_seconds(
+    os.getenv("FILTER_AUTO_DELETE_SECONDS", "0")
+)
 BOT_START_TIME = time.time()
 
 def validate_config():

@@ -3,8 +3,9 @@
 Telegram filter bot using [WZGram](https://wzgram.com/) and the native
 asynchronous [PyMongo driver](https://www.mongodb.com/docs/languages/python/pymongo-driver/current/reference/migration/).
 
-This branch repairs existing behavior and security issues. It adds no bot
-commands, no database collections, and no schema migration.
+This branch preserves existing filters and commands. Automatic deletion of
+filter-response message pairs uses a separate small MongoDB queue collection.
+Stored filter documents and their schema are unchanged.
 
 ## Existing behavior
 
@@ -44,9 +45,52 @@ credentials are not embedded into the image.
 | `ADD_FILTER_CMD`, `DELETE_FILTER_CMD`, `DELETE_ALL_CMD` | Filter commands |
 | `CONNECT_COMMAND`, `DISCONNECT_COMMAND`, `CONNECTIONS_COMMAND` | Connection commands |
 | `VIEW_FILTERS_COMMAND` | List filters command |
+| `FILTER_AUTO_DELETE_SECONDS` | `0` disables automatic message deletion (default); `1` to `172799` enables it for the specified delay in seconds |
 
 Allow only known deployment IPs in MongoDB Atlas network access. Do not
 use unrestricted `0.0.0.0/0` access for production.
+
+## Automatic deletion of filter messages
+
+When `FILTER_AUTO_DELETE_SECONDS` is positive, the bot schedules both the user's
+matching trigger message and the bot's text or media filter reply for removal
+after that many seconds. Only Telegram messages are removed. The saved filters
+and group connections are never deleted by this feature.
+
+The separate `FILTER_MESSAGE_DELETE_QUEUE` collection records pending message
+IDs and deadlines so pending jobs resume after a bot restart. Each message is
+deleted independently; a message already removed by a user or moderator does
+not prevent deletion of the other message. Temporary Telegram/API failures
+are retried with a limited backoff; failures are logged. The worker checks
+every second and deletion timing may vary slightly due to API/network latency.
+
+If the setting is `0`, new filter replies remain indefinitely and pending
+jobs from previous runs are canceled at startup. Turning it back on starts
+fresh schedules for newly generated filter replies.
+
+Telegram normally permits deletion only within 48 hours of the original
+message. The bot must have permission to delete **other users' messages**
+in groups or supergroups (typically administrator access with delete-messages
+rights). Without these permissions, the bot may remove its own reply but
+cannot remove the trigger message. Existing filters in MongoDB are unaffected.
+
+
+## Quoted filter names
+
+Use quotes around multi-word keywords. Names are case-insensitive on matching
+and stored in lowercase, while original quotes are not part of the keyword.
+
+- \`/add "Dive into You" Reply text\`
+- \`/add "Misha's car" Reply text\`
+- \`/add 'Misha\'s car' Reply text\` (escape the inner apostrophe)
+- \`/add "The \"Special\" One" Reply text\` (escape the inner double quotes)
+- \`/del "Dive into You" "Misha's car"\` (multiple names)
+- \`/del "The \"Special\" One"\`
+
+Straight and smart quotation pairs are supported. A plain single-word keyword
+such as \`Misha's\` can be used without quoting. Unclosed quotes are rejected
+instead of silently creating a truncated keyword. Formatting in filter reply
+content is preserved independently of keyword parsing.
 
 ## Before deploying to an existing database
 
